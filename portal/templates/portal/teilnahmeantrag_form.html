@@ -1,0 +1,41 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Teilnahmeantrag – Formular{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Teilnahmeantrag – Teil 1 bis 4</h2>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        {% for field in form %}
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}
+                    {% if field.field.required %}
+                        <span style="color: red">*</span>
+                    {% endif %}
+                </label><br>
+                {{ field }}
+                {% if field.help_text %}
+                    <small style="color: #555;">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="text-danger" style="color: red;">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" style="background-color: #1c3c57; color: white; padding: 0.6rem 1.2rem; border: none; border-radius: 4px;">
+            Antrag absenden
+        </button>
+    </form>
+
+    <br>
+    <a href="{% url 'dashboard' %}">Zurück zum Dashboard</a>
+</div>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Bieter Dashboard{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Bieter Dashboard</h2>
+    <p>Willkommen, {{ request.user.username }}</p>
+
+    <h3>Datei hochladen</h3>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.file }}
+        <button type="submit">Hochladen</button>
+    </form>
+
+    <hr>
+
+    <h3>Hochgeladene Dateien</h3>
+    {% if uploads %}
+        <ul>
+        {% for upload in uploads %}
+            <li>
+                <a href="{{ upload.file.url }}" target="_blank">{{ upload.file.name }}</a>
+                (hochgeladen am {{ upload.uploaded_at|date:"d.m.Y H:i" }})
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>Noch keine Dateien hochgeladen.</p>
+    {% endif %}
+</div>
+{% endblock %}

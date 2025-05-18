@@ -1,0 +1,30 @@
+{% extends 'portal/base.html' %}
+{% block title %}Eingereichte Anträge{% endblock %}
+{% block content %}
+<h2>Eingereichte Teilnahmeanträge</h2>
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
+    <thead>
+        <tr style="background-color: #f4f4f4;">
+            <th style="padding: 8px; text-align: left;">Firma</th>
+            <th style="padding: 8px; text-align: left;">Ansprechpartner</th>
+            <th style="padding: 8px; text-align: left;">E-Mail</th>
+            <th style="padding: 8px; text-align: left;">Umsatz 2023</th>
+            <th style="padding: 8px; text-align: left;">Erstellt am</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for antrag in antraege %}
+        <tr>
+            <td style="padding: 8px;">{{ antrag.firmenname }}</td>
+            <td style="padding: 8px;">{{ antrag.ansprechpartner }}</td>
+            <td style="padding: 8px;">{{ antrag.email }}</td>
+            <td style="padding: 8px;">{{ antrag.umsatz_2023 }}</td>
+            <td style="padding: 8px;">{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">Noch keine Anträge eingereicht.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

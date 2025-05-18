@@ -1,0 +1,29 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Login – Vergabetool{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Login</h2>
+
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li style="color: red;">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+
+    <form method="POST">
+        {% csrf_token %}
+        <input name="username" placeholder="Benutzername" required>
+        <input type="password" name="password" placeholder="Passwort" required>
+        <button type="submit">Login</button>
+    </form>
+
+    <a href="{% url 'register' %}">Neu registrieren</a>
+</div>
+{% endblock %}

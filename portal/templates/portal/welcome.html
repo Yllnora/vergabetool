@@ -1,0 +1,25 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Startseite – Vergabetool{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Willkommen beim Vergabetool</h2>
+    <p style="text-align: center;">Bitte loggen Sie sich ein, registrieren Sie sich<br>oder füllen Sie direkt einen Teilnahmeantrag aus:</p>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'login' %}">
+            <button style="margin-bottom: 1rem;">Login</button>
+        </a><br>
+        <a href="{% url 'register' %}">
+            <button style="margin-bottom: 1rem;">Registrieren</button>
+        </a><br>
+        <a href="{% url 'antrag' %}">
+            <button style="background-color: #1c3c57; color: white;">Teilnahmeantrag ausfüllen</button>
+        </a>
+    </div>
+</div>
+{% endblock %}

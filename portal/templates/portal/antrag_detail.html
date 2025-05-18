@@ -1,0 +1,22 @@
+{% extends 'portal/base.html' %}
+{% block title %}Antrag: {{ antrag.firmenname }}{% endblock %}
+{% block content %}
+<h2>Teilnahmeantrag – {{ antrag.firmenname }}</h2>
+
+<ul>
+    <li><strong>Ansprechpartner:</strong> {{ antrag.ansprechpartner }}</li>
+    <li><strong>E-Mail:</strong> {{ antrag.email }}</li>
+    <li><strong>Adresse:</strong> {{ antrag.adresse }}</li>
+    <li><strong>Umsatz 2023:</strong> {{ antrag.umsatz_2023 }}</li>
+    <li><strong>Umsatz 2022:</strong> {{ antrag.umsatz_2022 }}</li>
+    <li><strong>Umsatz 2021:</strong> {{ antrag.umsatz_2021 }}</li>
+    <li><strong>Berufshaftpflicht vorhanden:</strong> {{ antrag.berufshaftpflicht_vorhanden|yesno:"Ja,Nein" }}</li>
+    {% if antrag.berufshaftpflicht_nachweis %}
+    <li><strong>Nachweis:</strong> <a href="{{ antrag.berufshaftpflicht_nachweis.url }}">Download</a></li>
+    {% endif %}
+    <li><strong>Wirtschaftliche Verknüpfungen:</strong> {{ antrag.wirtschaftliche_verknuepfungen }}</li>
+    <li><strong>Eingereicht am:</strong> {{ antrag.erstellt_am|date:"d.m.Y H:i" }}</li>
+</ul>
+
+<a href="{% url 'antrag_liste' %}">Zurück zur Übersicht</a>
+{% endblock %}
