@@ -131,6 +131,11 @@
     {% block content %}
     {% endblock %}
 </div>
-
+<script>
+    document.addEventListener('invalid', function(e) {
+      e.preventDefault();
+      alert(e.target.validationMessage);
+    }, true);
+  </script>
 </body>
 </html>

@@ -102,11 +102,19 @@ def danke(request):
 
 @login_required
 def antrag_liste(request):
-    if request.user.role == 'Vergabestelle':
-        antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
-        return render(request, 'portal/antrag_liste.html', {'antraege': antraege})
-    else:
+    if request.user.role != 'Vergabestelle':
         return redirect('dashboard')
+
+    q = request.GET.get('q', '').strip()
+    if q.isdigit():
+        antraege = Teilnahmeantrag.objects.filter(pk=int(q)).order_by('-erstellt_am')
+    else:
+        antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
+
+    return render(request, 'portal/antrag_liste.html', {
+        'antraege': antraege,
+        'q': q,
+    })
 
 
 @login_required
