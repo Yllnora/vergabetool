@@ -19,6 +19,8 @@ class TeilnahmeantragForm(forms.ModelForm):
         model = Teilnahmeantrag
         fields = [
             # Teil 1
+            'is_brutto',
+            'steuer_satz',
             'firmenname',
             'adresse',
             'ansprechpartner',
@@ -63,6 +65,12 @@ class TeilnahmeantragForm(forms.ModelForm):
             'umsatz_2021': 'Angabe in Euro (€)',
             'team_groesse': 'Anzahl der Personen im Projektteam',
         }
+
+    def clean_steuer_satz(self):
+        s = self.cleaned_data.get('steuer_satz')
+        if s < 0 or s > 100:
+            raise forms.ValidationError("Steuersatz muss zwischen 0 und 100 liegen.")
+        return s
 
     def clean_berufshaftpflicht_nachweis(self):
         file = self.cleaned_data.get('berufshaftpflicht_nachweis')

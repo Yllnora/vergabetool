@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
+from decimal import Decimal
 
 # Benutzer mit Rollen
 class User(AbstractUser):
@@ -37,8 +38,29 @@ class Teilnahmeantrag(models.Model):
     umsatz_2023 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2022 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2021 = models.DecimalField(max_digits=12, decimal_places=2)
+    is_brutto = models.BooleanField(
+        default=True,
+        help_text="Check if Umsatz is Brutto (incl. tax). Uncheck for Netto."
+    )
+    steuer_satz = models.DecimalField(
+        max_digits=4, decimal_places=2,
+        default=Decimal('19.00'),
+        help_text="Steuersatz in Prozent, z.B. 19.00"
+    )
     berufshaftpflicht_vorhanden = models.BooleanField(default=False)
     berufshaftpflicht_nachweis = models.FileField(upload_to='nachweise/', blank=True, null=True)
+
+    @property
+    def umsatz_netto(self):
+        if self.is_brutto:
+            return (self.umsatz_2023 / (Decimal('1') + self.steuer_satz/Decimal('100'))).quantize(Decimal('0.01'))
+        return self.umsatz_2023
+
+    @property
+    def umsatz_brutto(self):
+        if not self.is_brutto:
+            return (self.umsatz_2023 * (Decimal('1') + self.steuer_satz/Decimal('100'))).quantize(Decimal('0.01'))
+        return self.umsatz_2023
 
     # Teil 3 – Team
     projektleitung = models.CharField(max_length=100, help_text="Name der Projektleitung")
