@@ -25,6 +25,15 @@ class Upload(models.Model):
         return f"{self.user.username} – {self.file.name}"
 
 
+
+class Projekt(models.Model):
+    name = models.CharField(max_length=200)
+    beschreibung = models.TextField(blank=True)
+    deadline = models.DateField(help_text="Abgabefrist für dieses Projekt", default=timezone.now)
+
+    def __str__(self):
+        return self.name
+
 # Teilnahmeantrag (Teil 1–4)
 class Teilnahmeantrag(models.Model):
     # Teil 1 – Firmendaten
@@ -39,18 +48,19 @@ class Teilnahmeantrag(models.Model):
     straftat = models.BooleanField(default=False)
     fehlende_abgaben = models.BooleanField(default=False)
 
-    deadline = models.DateField(
-        null=True, blank=True,
-        help_text="Abgabefrist für diesen Antrag"
-    )
+    projekt = models.ForeignKey(Projekt, on_delete=models.PROTECT, help_text="…")
 
     @property
     def is_late(self):
-        # If no deadline was set, we consider it not late
-        if self.deadline is None:
-            return False
-        # Otherwise compare dates
-        return timezone.now().date() > self.deadline
+        return timezone.now().date() > self.projekt.deadline
+        
+    projekt = models.ForeignKey(
+        Projekt,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        help_text="Für welches Projekt reichen Sie diesen Antrag ein?"
+    )
 
     # Teil 2 – Wirtschaftliche Leistungsfähigkeit
     # — existing Umsatz-Felder
