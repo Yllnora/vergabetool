@@ -102,20 +102,30 @@ def danke(request):
 
 @login_required
 def antrag_liste(request):
+    q = request.GET.get('q', '').strip()
+    if q:
+        # filter by partial, case-insensitive match on Firmenname
+        antraege = (Teilnahmeantrag.objects
+                    .filter(firmenname__icontains=q)
+                    .order_by('-erstellt_am'))
+    else:
+        antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
+        # Only Vergabestelle may view the list
     if request.user.role != 'Vergabestelle':
         return redirect('dashboard')
 
     q = request.GET.get('q', '').strip()
-    if q.isdigit():
-        antraege = Teilnahmeantrag.objects.filter(pk=int(q)).order_by('-erstellt_am')
+    if q:
+        antraege = (Teilnahmeantrag.objects
+                    .filter(firmenname__icontains=q)
+                    .order_by('-erstellt_am'))
     else:
         antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
-
+    # Render the list template with the queryset and search term
     return render(request, 'portal/antrag_liste.html', {
         'antraege': antraege,
         'q': q,
     })
-
 
 @login_required
 def antrag_detail(request, pk):

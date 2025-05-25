@@ -3,25 +3,62 @@
 {% block content %}
 <h2>Eingereichte Teilnahmeanträge</h2>
 
+<form method="get" action="{% url 'antrag_liste' %}" class="mb-3">
+  <div class="input-group">
+        <input type="text"
+          name="q"
+          value="{{ q }}"
+          placeholder="Firmenname suchen…"
+          class="form-control">
+    <button class="btn btn-primary" type="submit">Search</button>
+  </div>
+</form>
+
 <table style="width: 100%; border-collapse: collapse; margin-top: 2rem;">
     <thead>
         <tr style="background-color: #f4f4f4;">
             <th style="padding: 8px; text-align: left;">Firma</th>
             <th style="padding: 8px; text-align: left;">Ansprechpartner</th>
             <th style="padding: 8px; text-align: left;">E-Mail</th>
+            <th style="padding: 8px; text-align: left;">Umsatz Brutto 2023 (€)</th>
+            <th style="padding: 8px; text-align: left;">Umsatz Netto 2023 (€)</th>
+            <th style="padding: 8px; text-align: left;">Frist</th>
+            <th style="padding: 8px; text-align: left;">Status</th>
             <th style="padding: 8px; text-align: left;">Erstellt am</th>
         </tr>
     </thead>
     <tbody>
         {% for antrag in antraege %}
         <tr>
-            <td style="padding: 8px;">{{ antrag.firmenname }}</td>
+            <td style="padding: 8px;">
+              <a href="{% url 'antrag_detail' antrag.pk %}">
+                {{ antrag.firmenname }}
+              </a>
+            </td>
             <td style="padding: 8px;">{{ antrag.ansprechpartner }}</td>
             <td style="padding: 8px;">{{ antrag.email }}</td>
+            <td style="padding: 8px;">{{ antrag.umsatz_brutto }} €</td>
+            <td style="padding: 8px;">{{ antrag.umsatz_netto }} €</td>
+            <td style="padding: 8px;">{{ antrag.deadline|date:"d.m.Y" }}</td>
+            <td style="padding: 8px;">
+              {% if antrag.is_late %}
+                <span style="color: white; background: red; 
+                             padding: 0.2rem 0.5rem; border-radius: 4px;">
+                  Verspätet
+                </span>
+              {% else %}
+                <span style="color: white; background: green; 
+                             padding: 0.2rem 0.5rem; border-radius: 4px;">
+                  Rechtzeitig
+                </span>
+              {% endif %}
+            </td>
             <td style="padding: 8px;">{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
         </tr>
         {% empty %}
-        <tr><td colspan="5">Noch keine Anträge eingereicht.</td></tr>
+        <tr>
+            <td colspan="8">Noch keine Anträge eingereicht.</td>
+        </tr>
         {% endfor %}
     </tbody>
 </table>
