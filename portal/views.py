@@ -4,13 +4,17 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
+from django.db.models import Q
+from django.utils import timezone
 import zipfile
 import io
 import os
+import string
+
 from django.utils.text import slugify
 
 from .models import User, Upload, Teilnahmeantrag
-from .forms import UploadForm, TeilnahmeantragForm
+from .forms import UploadForm, TeilnahmeantragForm, TeilnahmeantragBewertungForm
 
 
 def welcome(request):
@@ -48,15 +52,21 @@ def user_login(request):
 @login_required
 def user_dashboard(request):
     if request.user.role == 'Bieter':
+        # Existing file‐uploads:
         uploads = Upload.objects.filter(user=request.user).order_by('-uploaded_at')
+
+        # NEW: all applications this Bieter has submitted:
+        meine_antraege = Teilnahmeantrag.objects.filter(
+            user=request.user
+        ).order_by('-erstellt_am')
+
         if request.method == 'POST':
             form = UploadForm(request.POST, request.FILES)
             if form.is_valid():
                 uploaded_file = request.FILES.get('file')
-                if uploaded_file:
-                    if not uploaded_file.name.lower().endswith(('.pdf', '.xlsx')):
-                        messages.error(request, 'Nur PDF- und Excel-Dateien erlaubt.')
-                        return redirect('dashboard')
+                if uploaded_file and not uploaded_file.name.lower().endswith(('.pdf', '.xlsx')):
+                    messages.error(request, 'Nur PDF- und Excel-Dateien erlaubt.')
+                    return redirect('dashboard')
                 upload = form.save(commit=False)
                 upload.user = request.user
                 upload.save()
@@ -64,13 +74,55 @@ def user_dashboard(request):
                 return redirect('dashboard')
         else:
             form = UploadForm()
+
         return render(request, 'portal/dashboard_bieter.html', {
             'form': form,
-            'uploads': uploads
+            'uploads': uploads,
+            'meine_antraege': meine_antraege,  # pass the user’s Anträge
         })
 
     elif request.user.role == 'Vergabestelle':
         return render(request, 'portal/dashboard_vergabe.html')
+
+
+@login_required
+def antrag_index(request):
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
+
+    # Build a dict: { 'A': queryset_of_Anfragen_starting_with_A, 'B': … }
+    grouped = {}
+    for letter in string.ascii_uppercase:
+        qs = Teilnahmeantrag.objects.filter(
+            firmenname__istartswith=letter
+        ).order_by('firmenname')
+        grouped[letter] = qs
+
+    return render(request, 'portal/antrag_index.html', {
+        'grouped': grouped
+    })
+
+
+@login_required
+def antrag_bewerten(request, pk):
+    # Only Vergabestelle can score
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
+
+    antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
+    if request.method == 'POST':
+        form = TeilnahmeantragBewertungForm(request.POST, instance=antrag)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Bewertung gespeichert.")
+            return redirect('antrag_detail', pk=antrag.pk)
+    else:
+        form = TeilnahmeantragBewertungForm(instance=antrag)
+
+    return render(request, 'portal/antrag_bewertung.html', {
+        'antrag': antrag,
+        'form': form,
+    })
 
 
 @login_required
@@ -88,7 +140,9 @@ def teilnahmeantrag_erstellen(request):
     if request.method == 'POST':
         form = TeilnahmeantragForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            antrag = form.save(commit=False)
+            antrag.user = request.user
+            antrag.save()
             return redirect('danke')
     else:
         form = TeilnahmeantragForm()
@@ -102,29 +156,40 @@ def danke(request):
 
 @login_required
 def antrag_liste(request):
+    """
+    Show two groups of applications:
+      - on_time: those submitted on or before their project's deadline
+      - late: those submitted strictly after the project's deadline
+    Also allow search by company name or address.
+    """
+    # 1) Read the search term (if any)
     q = request.GET.get('q', '').strip()
-    if q:
-        # filter by partial, case-insensitive match on Firmenname
-        antraege = (Teilnahmeantrag.objects
-                    .filter(firmenname__icontains=q)
-                    .order_by('-erstellt_am'))
-    else:
-        antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
-        # Only Vergabestelle may view the list
-    if request.user.role != 'Vergabestelle':
-        return redirect('dashboard')
 
-    q = request.GET.get('q', '').strip()
+    # 2) Start with all applications, ordered by newest first.
+    #    select_related('projekt') avoids extra DB queries when checking projekt.deadline.
+    base_qs = Teilnahmeantrag.objects.select_related('projekt').order_by('-erstellt_am')
+
+    # 3) If the user provided a search term, filter by Firmenname OR adresse.
     if q:
-        antraege = (Teilnahmeantrag.objects
-                    .filter(firmenname__icontains=q)
-                    .order_by('-erstellt_am'))
-    else:
-        antraege = Teilnahmeantrag.objects.all().order_by('-erstellt_am')
-    # Render the list template with the queryset and search term
+        base_qs = base_qs.filter(
+            Q(firmenname__icontains=q) |
+            Q(adresse__icontains=q)
+        )
+
+    # 4) Split into on_time vs. late based on the project's deadline.
+    today = timezone.now().date()
+
+    # on_time: projekt.deadline >= today
+    on_time = base_qs.filter(projekt__deadline__gte=today)
+
+    # late: projekt.deadline < today
+    late = base_qs.filter(projekt__deadline__lt=today)
+
+    # 5) Pass both QuerySets plus the search term to the template
     return render(request, 'portal/antrag_liste.html', {
-        'antraege': antraege,
-        'q': q,
+        'on_time': on_time,
+        'late': late,
+        'search_query': q,
     })
 
 @login_required
@@ -169,3 +234,14 @@ def antrag_json(request, pk):
         "erstellt_am": antrag.erstellt_am.isoformat(),
     }
     return JsonResponse(data)
+
+
+@login_required
+def kriterien_liste(request):
+    return render(request, 'portal/coming_soon.html', {'message': 'Kriterienverwaltung folgt…'})
+
+@login_required
+def auswertung_starten(request):
+    # Hier später die Logik anstoßen
+    messages.info(request, 'Auswertung ist noch nicht implementiert.')
+    return redirect('antrag_liste')

@@ -1,0 +1,20 @@
+{% extends 'portal/base.html' %}
+{% block title %}Bewertung: {{ antrag.firmenname }}{% endblock %}
+{% block content %}
+<h2>Antrag bewerten - {{ antrag.firmenname }}</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+        <div class="form-group" style="margin-bottom:1rem;">
+            {{ field.label_tag }}
+            {{ field }}
+            {% for err in field.errors %}
+                <div class="text-danger">{{ err }}</div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Speichern</button>
+    <a href="{% url 'antrag_detail' antrag.pk %}" class="btn btn-secondary">Abbrechen</a>
+</form>
+{% endblock %}

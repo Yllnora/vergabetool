@@ -14,11 +14,21 @@ class UploadForm(forms.ModelForm):
                 raise forms.ValidationError("Nur PDF- oder Excel-Dateien sind erlaubt.")
         return file
 
+class TeilnahmeantragBewertungForm(forms.ModelForm):
+    class Meta:
+        model = Teilnahmeantrag
+        fields = ['score_anforderung1', 'score_anforderung2']  # add more as needed
+        widgets = {
+            'score_anforderung1': forms.NumberInput(attrs={'min': 0, 'max': 10}),
+            'score_anforderung2': forms.NumberInput(attrs={'min': 0, 'max': 10}),
+        }
+
 class TeilnahmeantragForm(forms.ModelForm):
     class Meta:
         model = Teilnahmeantrag
         fields = [
             # Teil 1
+            'projekt',
             'firmenname',
             'adresse',
             'ansprechpartner',
@@ -55,7 +65,7 @@ class TeilnahmeantragForm(forms.ModelForm):
             'umsatz_2021': forms.NumberInput(attrs={'placeholder': 'z. B. 1500000 (€)'}),
             'team_groesse': forms.NumberInput(attrs={'placeholder': 'z. B. 5'}),
             'referenz_upload': forms.ClearableFileInput(attrs={'accept': '.pdf'}),
-            'deadline': forms.DateInput(attrs={'type': 'date', 'required': 'required'}),
+            'projekt': forms.Select(),
         }
         help_texts = {
             'referenz_upload': 'Bitte nur PDF-Dateien hochladen',

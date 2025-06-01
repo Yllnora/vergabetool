@@ -98,6 +98,23 @@
             color: var(--primary);
             font-weight: 500;
         }
+         /* ─── NEU: Tabellen global formatieren ─── */
+         table {
+            width: 100%;            /* Immer volle Breite des Elterncontainers */
+            table-layout: auto;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        thead th {
+            background-color: #f4f4f4;
+        }
     </style>
 </head>
 <body>

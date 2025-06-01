@@ -24,19 +24,23 @@ class Upload(models.Model):
     def __str__(self):
         return f"{self.user.username} – {self.file.name}"
 
-
-
 class Projekt(models.Model):
     name = models.CharField(max_length=200)
     beschreibung = models.TextField(blank=True)
-    deadline = models.DateField(help_text="Abgabefrist für dieses Projekt", default=timezone.now)
+    deadline = models.DateField()
 
     def __str__(self):
         return self.name
 
+
 # Teilnahmeantrag (Teil 1–4)
 class Teilnahmeantrag(models.Model):
-    # Teil 1 – Firmendaten
+    # The Bieter who submitted this Antrag
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        help_text="Der Bieter, der diesen Antrag eingereicht hat"
+    )
     firmenname = models.CharField(max_length=200)
     adresse = models.TextField()
     ansprechpartner = models.CharField(max_length=100)
@@ -48,22 +52,20 @@ class Teilnahmeantrag(models.Model):
     straftat = models.BooleanField(default=False)
     fehlende_abgaben = models.BooleanField(default=False)
 
-    projekt = models.ForeignKey(Projekt, on_delete=models.PROTECT, help_text="…")
-
-    @property
-    def is_late(self):
-        return timezone.now().date() > self.projekt.deadline
-        
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     projekt = models.ForeignKey(
-        Projekt,
+        'Projekt',
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
         help_text="Für welches Projekt reichen Sie diesen Antrag ein?"
     )
 
+    @property
+    def is_late(self):
+        if self.projekt is None or self.projekt.deadline is None:
+            return False
+        return timezone.now().date() > self.projekt.deadline
+
     # Teil 2 – Wirtschaftliche Leistungsfähigkeit
-    # — existing Umsatz-Felder
     umsatz_2023 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2022 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2021 = models.DecimalField(max_digits=12, decimal_places=2)
@@ -79,6 +81,37 @@ class Teilnahmeantrag(models.Model):
         default=Decimal('19.00'),
         help_text="Steuersatz in Prozent (z. B. 19.00 für 19%)."
     )
+
+    # --- New scoring fields (0–10 each) ---
+    score_anforderung1 = models.IntegerField(
+        null=True, blank=True,
+        help_text="Punkte (0–10) für Kriterium 1"
+    )
+    score_anforderung2 = models.IntegerField(
+        null=True, blank=True,
+        help_text="Punkte (0–10) für Kriterium 2"
+    )
+    # here other score fields can be added as needed
+
+    gesamt_score = models.IntegerField(
+        null=True, blank=True,
+        help_text="Summenpunktzahl (auto-berechnet)"
+    )
+
+    def berechne_gesamt_score(self):
+        total = 0
+        count = 0
+        for fld in ['score_anforderung1', 'score_anforderung2']:
+            val = getattr(self, fld)
+            if val is not None:
+                total += val
+                count += 1
+        return total if count else None
+
+    def save(self, *args, **kwargs):
+        # Recalculate gesamt_score whenever scores change
+        self.gesamt_score = self.berechne_gesamt_score()
+        super().save(*args, **kwargs)
 
     berufshaftpflicht_vorhanden = models.BooleanField(default=False)
     berufshaftpflicht_nachweis = models.FileField(

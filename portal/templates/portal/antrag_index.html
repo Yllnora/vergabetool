@@ -1,0 +1,41 @@
+{% extends 'portal/base.html' %}
+{% block title %}Index nach Firmenname{% endblock %}
+{% block content %}
+<h2>Index: Firmenname nach Alphabet</h2>
+
+<ul style="list-style: none; padding: 0; display: flex; flex-wrap: wrap;">
+  {% for letter, items in grouped.items %}
+    <li style="margin: 0.2rem;">
+      {% if items.count %}
+        <a href="#{{ letter }}">{{ letter }}</a>
+      {% else %}
+        <span style="color: #ccc;">{{ letter }}</span>
+      {% endif %}
+    </li>
+  {% endfor %}
+</ul>
+
+<hr/>
+
+{% for letter, items in grouped.items %}
+  {% if items.count %}
+    <h3 id="{{ letter }}">{{ letter }}</h3>
+    <table style="width:100%; border-collapse: collapse;">
+      <thead>
+        <tr><th>Firma</th><th>Ansprechpartner</th><th>Datum</th></tr>
+      </thead>
+      <tbody>
+        {% for a in items %}
+          <tr>
+            <td>
+              <a href="{% url 'antrag_detail' a.pk %}">{{ a.firmenname }}</a>
+            </td>
+            <td>{{ a.ansprechpartner }}</td>
+            <td>{{ a.erstellt_am|date:"d.m.Y" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+{% endfor %}
+{% endblock %}
