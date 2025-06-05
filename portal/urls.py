@@ -28,6 +28,12 @@ urlpatterns = [
     path('antraege/', login_required(views.antrag_liste), name='antrag_liste'),
     path('kriterien/', login_required(views.kriterien_liste), name='kriterien_liste'),       # Platzhalter‐View
     path('auswertung/start/', login_required(views.auswertung_starten), name='auswertung_starten'),  # Platzhalter‐View
+    path('projekte/', views.projekt_liste, name='projekt_liste'),
+    path('dashboard_vergabestelle/', views.dashboard_vergabestelle, name='dashboard_vergabestelle'),
+    path('api/projekt/<int:projekt_pk>/fragen/', views.projekt_fragen_api, name='projekt_fragen_api'),
+
+
+
 
 
 ]

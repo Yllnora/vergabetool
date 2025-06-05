@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Avg, Count, Sum
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -11,9 +12,11 @@ import io
 import os
 import string
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
 from django.utils.text import slugify
 
-from .models import User, Upload, Teilnahmeantrag
+from .models import User, Upload, Teilnahmeantrag, Projekt
 from .forms import UploadForm, TeilnahmeantragForm, TeilnahmeantragBewertungForm
 
 
@@ -50,12 +53,41 @@ def user_login(request):
 
 
 @login_required
-def user_dashboard(request):
-    if request.user.role == 'Bieter':
-        # Existing file‐uploads:
-        uploads = Upload.objects.filter(user=request.user).order_by('-uploaded_at')
+def dashboard_vergabestelle(request):
+    """
+    Zeigt für die Vergabestelle eine Übersicht aller Projekte:
+      - Anzahl der eingegangenen Anträge
+      - Durchschnittsumsatz 2023 pro Projekt
+      - Gesamtsumme aller Anträge pro Projekt
+      - (optional) Top-Bieter
+    """
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
 
-        # NEW: all applications this Bieter has submitted:
+    # 1) Holen wir uns alle Projekte:
+    alle_projekte = Projekt.objects.all()
+
+    # 2) Annotate = zählen wir alle Anträge pro Projekt, plus Durchschnitt/Umsatz
+    projekte_mit_stats = alle_projekte.annotate(
+        anzahl_antraege=Count('teilnahmeantrag'),
+        avg_umsatz_2023=Avg('teilnahmeantrag__umsatz_2023'),
+        sum_umsatz_2023=Sum('teilnahmeantrag__umsatz_2023'),
+    ).order_by('deadline')
+
+    return render(request, 'portal/dashboard_vergabe.html', {
+        'projekte_stats': projekte_mit_stats,
+        # 'heute': timezone.now().date()  # falls noch benötigt
+    })
+
+@login_required
+def user_dashboard(request):
+    # Initialize variables so Pylance knows they exist
+    form = None
+    meine_antraege = None
+
+    if request.user.role == 'Bieter':
+        # Fetch existing uploads and Anträge for this Bieter
+        uploads = Upload.objects.filter(user=request.user).order_by('-uploaded_at')
         meine_antraege = Teilnahmeantrag.objects.filter(
             user=request.user
         ).order_by('-erstellt_am')
@@ -82,7 +114,35 @@ def user_dashboard(request):
         })
 
     elif request.user.role == 'Vergabestelle':
-        return render(request, 'portal/dashboard_vergabe.html')
+        # Fetch all Projekte, order by deadline, and prefetch each Projekt’s Anträge
+        alle_projekte = Projekt.objects.all().order_by('deadline').prefetch_related('teilnahmeantrag_set')
+        return render(request, 'portal/dashboard_vergabe.html', {
+            'projekte': alle_projekte
+        })
+
+    # (If for some reason role is neither, you might redirect or raise PermissionDenied)
+    return redirect('login')
+
+
+@login_required
+def projekt_liste(request):
+    """
+    Zeigt alle Projekte (mit Deadline) und darunter jeweils die eingereichten Anträge.
+    Nur ein Benutzer mit role='Vergabestelle' darf diese Seite sehen.
+    """
+    # 1) Zugriffsschutz: Nur Vergabestelle darf auf diese View
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
+
+    # 2) Alle Projekte nach Deadline sortieren
+    #    -> select_related ist hier nicht nötig, weil wir auf den FK antrags‐seite zugreifen
+    #    -> prefetch_related lädt alle zugehörigen Teilnahmeantrag‐Sets in einem Rutsch
+    alle_projekte = Projekt.objects.order_by('deadline')\
+        .prefetch_related('teilnahmeantrag_set')
+    # 3) Rendern der Template mit dem Context
+    return render(request, 'portal/projekt_liste.html', {
+        'projekte': alle_projekte
+    })
 
 
 @login_required
@@ -143,6 +203,7 @@ def teilnahmeantrag_erstellen(request):
             antrag = form.save(commit=False)
             antrag.user = request.user
             antrag.save()
+            messages.success(request, "Ihr Teilnahmeantrag wurde erfolgreich eingereicht.")
             return redirect('danke')
     else:
         form = TeilnahmeantragForm()
@@ -156,12 +217,6 @@ def danke(request):
 
 @login_required
 def antrag_liste(request):
-    """
-    Show two groups of applications:
-      - on_time: those submitted on or before their project's deadline
-      - late: those submitted strictly after the project's deadline
-    Also allow search by company name or address.
-    """
     # 1) Read the search term (if any)
     q = request.GET.get('q', '').strip()
 
@@ -245,3 +300,18 @@ def auswertung_starten(request):
     # Hier später die Logik anstoßen
     messages.info(request, 'Auswertung ist noch nicht implementiert.')
     return redirect('antrag_liste')
+
+@login_required
+@require_GET
+def projekt_fragen_api(request, projekt_pk):
+    """
+    Gibt alle Fragen zu einem Projekt als JSON zurück.
+    Wird per AJAX aufgerufen, sobald im Formular ein Projekt ausgewählt wird.
+    """
+    if request.user.role != 'Bieter':
+        # Nur Bieter sollen Anträge mit den Fragen füllen
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    projekt = get_object_or_404(Projekt, pk=projekt_pk)
+    fragen = projekt.fragen.all().values_list('text', flat=True)
+    return JsonResponse({'fragen': list(fragen)})

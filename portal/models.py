@@ -4,6 +4,12 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+class Frage(models.Model):
+    projekt = models.ForeignKey('Projekt', on_delete=models.CASCADE, related_name='fragen')
+    text = models.CharField(max_length=500)
+
+    def __str__(self):
+        return f"{self.projekt.name} – {self.text[:50]}…"
 
 
 # Benutzer mit Rollen
@@ -25,9 +31,10 @@ class Upload(models.Model):
         return f"{self.user.username} – {self.file.name}"
 
 class Projekt(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, help_text="Projektname")
     beschreibung = models.TextField(blank=True)
-    deadline = models.DateField()
+    deadline = models.DateField(help_text="Einsendeschluss für Anträge")
+    # (Fügen Sie hier gern noch weitere Felder hinzu, z.B. Kategorie, Punkte‐Gewichtung, …)
 
     def __str__(self):
         return self.name
@@ -58,12 +65,6 @@ class Teilnahmeantrag(models.Model):
         on_delete=models.PROTECT,
         help_text="Für welches Projekt reichen Sie diesen Antrag ein?"
     )
-
-    @property
-    def is_late(self):
-        if self.projekt is None or self.projekt.deadline is None:
-            return False
-        return timezone.now().date() > self.projekt.deadline
 
     # Teil 2 – Wirtschaftliche Leistungsfähigkeit
     umsatz_2023 = models.DecimalField(max_digits=12, decimal_places=2)
@@ -175,3 +176,9 @@ class Teilnahmeantrag(models.Model):
                 * (Decimal('1') + self.steuer_satz / Decimal('100'))
             ).quantize(Decimal('0.01'))
         return self.umsatz_2023
+    
+    @property
+    def is_late(self):
+        if self.projekt is None or self.projekt.deadline is None:
+            return False
+        return timezone.now().date() > self.projekt.deadline

@@ -56,6 +56,7 @@ class TeilnahmeantragForm(forms.ModelForm):
             'referenz_upload',
         ]
         widgets = {
+            'projekt': forms.Select(),
             'adresse': forms.Textarea(attrs={'rows': 2}),
             'wirtschaftliche_verknuepfungen': forms.Textarea(attrs={'rows': 3}),
             'referenz_1': forms.Textarea(attrs={'rows': 3}),
@@ -65,7 +66,7 @@ class TeilnahmeantragForm(forms.ModelForm):
             'umsatz_2021': forms.NumberInput(attrs={'placeholder': 'z. B. 1500000 (€)'}),
             'team_groesse': forms.NumberInput(attrs={'placeholder': 'z. B. 5'}),
             'referenz_upload': forms.ClearableFileInput(attrs={'accept': '.pdf'}),
-            'projekt': forms.Select(),
+            
         }
         help_texts = {
             'referenz_upload': 'Bitte nur PDF-Dateien hochladen',
