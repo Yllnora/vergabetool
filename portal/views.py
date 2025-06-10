@@ -214,6 +214,23 @@ def teilnahmeantrag_erstellen(request):
 def danke(request):
     return render(request, 'portal/danke.html')
 
+@login_required
+def projekt_fragen_api(request, pk):
+    """
+    Return JSON list of Fragen for Projekt with id=pk.
+    Each item: {id: <pk>, text: <text>, field_type: <'boolean' or 'text'>}
+    """
+    projekt = get_object_or_404(Projekt, pk=pk)
+    fragen = projekt.fragen.all().values('pk', 'text', 'field_type')
+    # convert QuerySet to list
+    data = []
+    for f in fragen:
+        data.append({
+            'id': f['pk'],
+            'text': f['text'],
+            'field_type': f['field_type'],
+        })
+    return JsonResponse({'fragen': data})
 
 @login_required
 def antrag_liste(request):
@@ -300,18 +317,3 @@ def auswertung_starten(request):
     # Hier später die Logik anstoßen
     messages.info(request, 'Auswertung ist noch nicht implementiert.')
     return redirect('antrag_liste')
-
-@login_required
-@require_GET
-def projekt_fragen_api(request, projekt_pk):
-    """
-    Gibt alle Fragen zu einem Projekt als JSON zurück.
-    Wird per AJAX aufgerufen, sobald im Formular ein Projekt ausgewählt wird.
-    """
-    if request.user.role != 'Bieter':
-        # Nur Bieter sollen Anträge mit den Fragen füllen
-        return JsonResponse({'error': 'Unauthorized'}, status=403)
-
-    projekt = get_object_or_404(Projekt, pk=projekt_pk)
-    fragen = projekt.fragen.all().values_list('text', flat=True)
-    return JsonResponse({'fragen': list(fragen)})

@@ -4,14 +4,6 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
-class Frage(models.Model):
-    projekt = models.ForeignKey('Projekt', on_delete=models.CASCADE, related_name='fragen')
-    text = models.CharField(max_length=500)
-
-    def __str__(self):
-        return f"{self.projekt.name} – {self.text[:50]}…"
-
-
 # Benutzer mit Rollen
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -40,6 +32,28 @@ class Projekt(models.Model):
         return self.name
 
 
+class Frage(models.Model):
+    FIELD_TYPE_BOOLEAN = 'boolean'
+    FIELD_TYPE_TEXT = 'text'
+    FIELD_TYPE_CHOICES = [
+        (FIELD_TYPE_BOOLEAN, 'Ja/Nein'),
+        (FIELD_TYPE_TEXT, 'Freitext'),
+        # you could extend: ('number', 'Zahl'), ('choice', 'Auswahl'), etc.
+    ]
+
+    projekt = models.ForeignKey(Projekt, on_delete=models.CASCADE, related_name='fragen')
+    text = models.TextField(help_text="Die Fragestellung, z.B. 'Gab es besondere Anforderungen?'")
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES, default=FIELD_TYPE_BOOLEAN)
+
+    order = models.PositiveIntegerField(default=0, help_text="Reihenfolge der Fragen in Formular")
+    # optional: add an ordering meta
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"[{self.projekt.name}] Frage #{self.pk}: {self.text[:30]}..."
+
 # Teilnahmeantrag (Teil 1–4)
 class Teilnahmeantrag(models.Model):
     # The Bieter who submitted this Antrag
@@ -48,6 +62,8 @@ class Teilnahmeantrag(models.Model):
         on_delete=models.CASCADE,
         help_text="Der Bieter, der diesen Antrag eingereicht hat"
     )
+    projekt = models.ForeignKey(Projekt, on_delete=models.PROTECT, related_name='antraege')
+
     firmenname = models.CharField(max_length=200)
     adresse = models.TextField()
     ansprechpartner = models.CharField(max_length=100)
@@ -146,6 +162,10 @@ class Teilnahmeantrag(models.Model):
         help_text="Nur PDF zulässig"
     )
 
+    # NEW: dynamic answers to Fragen
+    from django.db.models import JSONField
+    antworten = JSONField(blank=True, default=dict, help_text="Speichert die Antworten auf projektspezifische Fragen als JSON")
+
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -179,6 +199,10 @@ class Teilnahmeantrag(models.Model):
     
     @property
     def is_late(self):
-        if self.projekt is None or self.projekt.deadline is None:
-            return False
-        return timezone.now().date() > self.projekt.deadline
+        """
+        Compare submission date to the project's deadline.
+        Return True if submitted after deadline.
+        """
+        if not self.projekt or not self.projekt.deadline:
+            return False  # or decide default
+        return self.erstellt_am.date() > self.projekt.deadline
