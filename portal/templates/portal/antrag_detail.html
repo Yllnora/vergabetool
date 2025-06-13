@@ -1,7 +1,5 @@
 {% extends 'portal/base.html' %}
 {% load static %}
-{# Nur laden, wenn Du weitere custom Tags brauchst. json_extras entfernen, falls nicht genutzt #}
-{# {% load json_extras %} #}
 
 {% block title %}Antrag: {{ antrag.firmenname }}{% endblock %}
 
@@ -98,9 +96,14 @@
         <h3>Projektbezogene Fragen & Antworten</h3>
         <ul>
             {% for antwort in antrag.antworten.all %}
-                <li>
+                <li style="margin-bottom: 0.5rem;">
                   <strong>{{ antwort.frage.text }}:</strong>
-                  {{ antwort.text }}
+                  {# If boolean, format yes/no; else show text #}
+                  {% if antwort.frage.field_type == 'boolean' %}
+                    {{ antwort.text|yesno:"Ja,Nein" }}
+                  {% else %}
+                    {{ antwort.text }}
+                  {% endif %}
                 </li>
             {% empty %}
                 <li>Keine projektbezogenen Antworten vorhanden.</li>
@@ -108,8 +111,19 @@
         </ul>
     </div>
 
+    {# Bewertung-Link, nur für Vergabestelle #}
+    {% if request.user.is_authenticated and request.user.role == "Vergabestelle" %}
+    <div style="margin-top: 1.5rem;">
+        <a href="{% url 'antrag_bewerten' antrag.pk %}">
+            <button style="padding:0.6rem 1.2rem; background:var(--primary); color:white; border:none; border-radius:4px;">
+                Bewertung hinzufügen/bearbeiten
+            </button>
+        </a>
+    </div>
+    {% endif %}
+
     <div style="margin-top: 2rem;">
-        <a href="{% url 'dashboard' %}">
+        <a href="{% if request.user.role == 'Vergabestelle' %}{% url 'antrag_liste' %}{% else %}{% url 'dashboard' %}{% endif %}">
             <button style="width:auto; padding:0.6rem 1.2rem;">Zurück zur Übersicht</button>
         </a>
     </div>

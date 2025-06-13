@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Projekt, Teilnahmeantrag, Upload, User, Frage
+from .models import Projekt, Teilnahmeantrag, Upload, User, Frage, Kriterium, Bewertung
 
 @admin.register(Projekt)
 class ProjektAdmin(admin.ModelAdmin):
@@ -20,7 +20,16 @@ class UploadAdmin(admin.ModelAdmin):
 class UserAdmin(admin.ModelAdmin):
     list_display = ('username', 'email', 'role')
 
+@admin.register(Kriterium)
+class KriteriumAdmin(admin.ModelAdmin):
+    list_display = ('text', 'projekt', 'max_punkte')
+    list_filter = ('projekt',)
+    search_fields = ('text',)
 
+# If you want to see Bewertungen inline under Antrag in admin:
+class BewertungInline(admin.TabularInline):
+    model = Bewertung
+    extra = 0
 
 @admin.register(Frage)
 class FrageAdmin(admin.ModelAdmin):

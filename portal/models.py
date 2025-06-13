@@ -54,6 +54,15 @@ class Frage(models.Model):
     def __str__(self):
         return f"[{self.projekt.name}] Frage #{self.pk}: {self.text[:30]}..."
 
+class Kriterium(models.Model):
+    projekt = models.ForeignKey(Projekt, on_delete=models.CASCADE, related_name='kriterien')
+    text = models.CharField(max_length=500, help_text="Beschreiben Sie das Kriterium")
+    # Optional: allow varying max score, otherwise assume 10:
+    max_punkte = models.PositiveSmallIntegerField(default=10, help_text="Maximale Punktzahl (z. B. 10)")
+    # Optional: weight, description, etc.
+    def __str__(self):
+        return f"{self.projekt.name}: {self.text[:30]}{'…' if len(self.text)>30 else ''}"
+
 # Teilnahmeantrag (Teil 1–4)
 class Teilnahmeantrag(models.Model):
     # The Bieter who submitted this Antrag
@@ -65,7 +74,7 @@ class Teilnahmeantrag(models.Model):
     projekt = models.ForeignKey(Projekt, on_delete=models.PROTECT, related_name='antraege')
 
     firmenname = models.CharField(max_length=200)
-    adresse = models.TextField()
+    adresse = models.CharField(max_length=200)
     ansprechpartner = models.CharField(max_length=100)
     email = models.EmailField()
     wirtschaftliche_verknuepfungen = models.TextField(blank=True)
@@ -162,14 +171,26 @@ class Teilnahmeantrag(models.Model):
         help_text="Nur PDF zulässig"
     )
 
+
     # NEW: dynamic answers to Fragen
     from django.db.models import JSONField
     antworten = JSONField(blank=True, default=dict, help_text="Speichert die Antworten auf projektspezifische Fragen als JSON")
 
     erstellt_am = models.DateTimeField(auto_now_add=True)
-
     def __str__(self):
         return f"{self.firmenname} ({self.ansprechpartner})"
+
+class Bewertung(models.Model):
+    antrag = models.ForeignKey(Teilnahmeantrag, on_delete=models.CASCADE, related_name='bewertungen')
+    kriterium = models.ForeignKey(Kriterium, on_delete=models.CASCADE, related_name='bewertungen')
+    punkte = models.PositiveSmallIntegerField()
+    kommentar = models.TextField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('antrag', 'kriterium')  # one score per criterion per application
+
+    def __str__(self):
+        return f"{self.antrag} - {self.kriterium.text[:20]}: {self.punkte}"
 
     @property
     def umsatz_netto(self):

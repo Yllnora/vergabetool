@@ -121,9 +121,13 @@
 
 <!-- Navigation -->
 <div class="nav">
-    <a href="{% url 'login' %}">
-        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
-    </a>
+    {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}">
+    {% else %}
+        <a href="{% url 'login' %}">
+    {% endif %}
+            <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+        </a>
     <div class="menu-wrapper" tabindex="0">
         <button class="menu-toggle" aria-label="Menü öffnen">☰</button>
         <div class="dropdown">

@@ -16,8 +16,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.utils.text import slugify
 
-from .models import User, Upload, Teilnahmeantrag, Projekt
-from .forms import UploadForm, TeilnahmeantragForm, TeilnahmeantragBewertungForm
+from .models import User, Upload, Teilnahmeantrag, Projekt, Frage, Kriterium, Bewertung
+from .forms import UploadForm, TeilnahmeantragForm, TeilnahmeantragBewertungForm, BewertungForm
 
 
 def welcome(request):
@@ -164,28 +164,6 @@ def antrag_index(request):
 
 
 @login_required
-def antrag_bewerten(request, pk):
-    # Only Vergabestelle can score
-    if request.user.role != 'Vergabestelle':
-        return redirect('dashboard')
-
-    antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
-    if request.method == 'POST':
-        form = TeilnahmeantragBewertungForm(request.POST, instance=antrag)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Bewertung gespeichert.")
-            return redirect('antrag_detail', pk=antrag.pk)
-    else:
-        form = TeilnahmeantragBewertungForm(instance=antrag)
-
-    return render(request, 'portal/antrag_bewertung.html', {
-        'antrag': antrag,
-        'form': form,
-    })
-
-
-@login_required
 def user_logout(request):
     logout(request)
     return redirect('login')
@@ -208,6 +186,33 @@ def teilnahmeantrag_erstellen(request):
     else:
         form = TeilnahmeantragForm()
     return render(request, 'portal/teilnahmeantrag_form.html', {'form': form})
+
+@login_required
+def antrag_bewerten(request, pk):
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
+    antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
+    # Before creating the form, check project:
+    projekt = antrag.projekt
+    if not projekt:
+        messages.error(request, "Dieser Antrag hat kein zugeordnetes Projekt.")
+        return redirect('antrag_detail', pk=pk)
+    # Check if Projekt has criteria:
+    if not projekt.kriterien.exists():
+        messages.info(request, "Für dieses Projekt wurden noch keine Kriterien definiert.")
+        return redirect('antrag_detail', pk=pk)
+    if request.method == 'POST':
+        form = BewertungForm(request.POST, antrag=antrag)
+        if form.is_valid():
+            form.save(antrag)
+            messages.success(request, "Bewertung gespeichert.")
+            return redirect('antrag_detail', pk=antrag.pk)
+    else:
+        form = BewertungForm(antrag=antrag)
+    return render(request, 'portal/antrag_bewertung.html', {
+        'antrag': antrag,
+        'form': form,
+    })
 
 
 @login_required

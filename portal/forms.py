@@ -1,5 +1,5 @@
 from django import forms
-from .models import Upload, Teilnahmeantrag, Projekt, Frage
+from .models import Upload, Teilnahmeantrag, Projekt, Frage, Kriterium, Bewertung
 
 class UploadForm(forms.ModelForm):
     class Meta:
@@ -178,3 +178,69 @@ class TeilnahmeantragForm(forms.ModelForm):
             if "referenz" not in name and "projekt" not in name:
                 raise forms.ValidationError("Bitte benennen Sie die Datei z. B. als 'Referenz_Projektname.pdf'.")
         return file
+
+class BewertungForm(forms.Form):
+    """
+    Dynamically built: fields will be added in the view for each Kriterium of the Projekt.
+    Field names: f"punkte_{k_id}", optional f"kommentar_{k_id}".
+    """
+
+    def __init__(self, *args, antrag=None, **kwargs):
+        """
+        antrag: the Teilnahmeantrag instance to score.
+        """
+        super().__init__(*args, **kwargs)
+        if antrag is None:
+            return
+        projekt = antrag.projekt
+        if not projekt:
+            return
+        # Fetch all criteria for this projekt
+        kriterien = Kriterium.objects.filter(projekt=projekt).order_by('id')
+        # If existing Bewertungen exist, build a dict for initial values:
+        existing = {b.kriterium_id: b for b in antrag.bewertungen.all()}
+        for kriterium in kriterien:
+            field_name = f"punkte_{kriterium.pk}"
+            max_p = kriterium.max_punkte or 10
+            initial_punkte = existing.get(kriterium.pk).punkte if kriterium.pk in existing else None
+            self.fields[field_name] = forms.IntegerField(
+                label=kriterium.text,
+                min_value=0,
+                max_value=max_p,
+                initial=initial_punkte,
+                required=True,
+                help_text=f"0 bis {max_p}"
+            )
+            # Optional: comment field
+            comment_field = f"kommentar_{kriterium.pk}"
+            init_comment = existing.get(kriterium.pk).kommentar if kriterium.pk in existing else ''
+            self.fields[comment_field] = forms.CharField(
+                label=f"Kommentar zu „{kriterium.text[:30]}“",
+                initial=init_comment,
+                required=False,
+                widget=forms.Textarea(attrs={'rows': 2})
+            )
+
+    def save(self, antrag):
+        """
+        Read cleaned_data and create/update Bewertung instances for this Antrag.
+        """
+        # For each field in cleaned_data, find those starting with 'punkte_'
+        for name, value in self.cleaned_data.items():
+            if name.startswith("punkte_"):
+                _, k_id_str = name.split("_", 1)
+                try:
+                    k_id = int(k_id_str)
+                except ValueError:
+                    continue
+                punkte = value
+                # find comment:
+                comment_key = f"kommentar_{k_id}"
+                kommentar = self.cleaned_data.get(comment_key, "")
+                kriterium = Kriterium.objects.get(pk=k_id)
+                bewertung_obj, created = Bewertung.objects.update_or_create(
+                    antrag=antrag, kriterium=kriterium,
+                    defaults={'punkte': punkte, 'kommentar': kommentar}
+                )
+        # Optionally return something
+        return

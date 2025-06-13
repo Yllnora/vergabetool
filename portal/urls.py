@@ -32,6 +32,8 @@ urlpatterns = [
     path('dashboard_vergabestelle/', views.dashboard_vergabestelle, name='dashboard_vergabestelle'),
     # path('api/projekt/<int:projekt_pk>/fragen/', views.projekt_fragen_api, name='projekt_fragen_api'),
     path('api/projekt/<int:pk>/fragen/', views.projekt_fragen_api, name='projekt_fragen_api'),
+    path('antrag/<int:pk>/bewerten/', views.antrag_bewerten, name='antrag_bewerten'),
+
 
 
 
