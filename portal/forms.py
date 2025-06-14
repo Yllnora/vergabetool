@@ -68,12 +68,16 @@ class TeilnahmeantragForm(forms.ModelForm):
             'referenz_upload': forms.ClearableFileInput(attrs={'accept': '.pdf'}),
             
         }
+        labels = {
+            'team_groesse': 'Team-Größe',
+            'wirtschaftliche_verknuepfungen': 'Wirtschaftliche Verknüpfungen',
+        }
         help_texts = {
             'referenz_upload': 'Bitte nur PDF-Dateien hochladen',
             'umsatz_2023': 'Angabe in Euro (€)',
             'umsatz_2022': 'Angabe in Euro (€)',
             'umsatz_2021': 'Angabe in Euro (€)',
-            'team_groesse': 'Anzahl der Personen im Projektteam',
+            'team_größe': 'Anzahl der Personen im Projektteam',
         }
 
     def __init__(self, *args, **kwargs):
@@ -110,10 +114,10 @@ class TeilnahmeantragForm(forms.ModelForm):
                         label=label,
                         required=False
                     )
-                    # If editing existing Antrag, prefill from instance.antworten
+                    
                     if self.instance and isinstance(self.instance.antworten, dict):
                         existing = self.instance.antworten.get(str(frage.pk))
-                        # existing could be True/False
+                        
                         if existing is not None:
                             self.initial[field_name] = existing
                 elif frage.field_type == Frage.FIELD_TYPE_TEXT:
@@ -127,7 +131,7 @@ class TeilnahmeantragForm(forms.ModelForm):
                         if existing is not None:
                             self.initial[field_name] = existing
                 else:
-                    # if you add more types, handle here
+                    
                     pass
 
     def clean(self):

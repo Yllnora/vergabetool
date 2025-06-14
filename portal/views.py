@@ -192,15 +192,14 @@ def antrag_bewerten(request, pk):
     if request.user.role != 'Vergabestelle':
         return redirect('dashboard')
     antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
-    # Before creating the form, check project:
     projekt = antrag.projekt
     if not projekt:
         messages.error(request, "Dieser Antrag hat kein zugeordnetes Projekt.")
         return redirect('antrag_detail', pk=pk)
-    # Check if Projekt has criteria:
     if not projekt.kriterien.exists():
         messages.info(request, "Für dieses Projekt wurden noch keine Kriterien definiert.")
         return redirect('antrag_detail', pk=pk)
+
     if request.method == 'POST':
         form = BewertungForm(request.POST, antrag=antrag)
         if form.is_valid():
@@ -209,10 +208,28 @@ def antrag_bewerten(request, pk):
             return redirect('antrag_detail', pk=antrag.pk)
     else:
         form = BewertungForm(antrag=antrag)
+
+    # Erzeuge kriterium_pairs aus form und den Kriterium-Objekten
+    kriterium_pairs = []
+    for kriterium in projekt.kriterien.order_by('id'):
+        # Feldnamen wie in BewertungForm __init__: "punkte_<pk>" und "kommentar_<pk>"
+        feld_punkte = f"punkte_{kriterium.pk}"
+        feld_kommentar = f"kommentar_{kriterium.pk}"
+        # form[feldname] liefert BoundField (Widget + Fehler + value)
+        if feld_punkte in form.fields:
+            punkte_field = form[feld_punkte]
+            comment_field = form[feld_kommentar] if feld_kommentar in form.fields else None
+            kriterium_pairs.append({
+                'label': kriterium.text,
+                'punkte_field': punkte_field,
+                'comment_field': comment_field,
+            })
     return render(request, 'portal/antrag_bewertung.html', {
         'antrag': antrag,
         'form': form,
+        'kriterium_pairs': kriterium_pairs,
     })
+
 
 
 @login_required

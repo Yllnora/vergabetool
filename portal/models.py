@@ -30,6 +30,9 @@ class Projekt(models.Model):
 
     def __str__(self):
         return self.name
+    class Meta:
+        verbose_name = "Projekt"
+        verbose_name_plural = "Projekte"
 
 
 class Frage(models.Model):
@@ -50,6 +53,8 @@ class Frage(models.Model):
 
     class Meta:
         ordering = ['order']
+        verbose_name = "Frage"
+        verbose_name_plural = "Fragen"
 
     def __str__(self):
         return f"[{self.projekt.name}] Frage #{self.pk}: {self.text[:30]}..."
@@ -62,6 +67,9 @@ class Kriterium(models.Model):
     # Optional: weight, description, etc.
     def __str__(self):
         return f"{self.projekt.name}: {self.text[:30]}{'…' if len(self.text)>30 else ''}"
+    class Meta:
+        verbose_name = "Kriterium"
+        verbose_name_plural = "Kriterien"
 
 # Teilnahmeantrag (Teil 1–4)
 class Teilnahmeantrag(models.Model):
@@ -151,6 +159,7 @@ class Teilnahmeantrag(models.Model):
         help_text="Name der Projektleitung"
     )
     team_groesse = models.IntegerField(
+        verbose_name="Team-Größe",
         help_text="Anzahl Mitarbeitende im Projektteam"
     )
     zustandigkeit_bauleitung = models.CharField(
@@ -179,6 +188,9 @@ class Teilnahmeantrag(models.Model):
     erstellt_am = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.firmenname} ({self.ansprechpartner})"
+    class Meta:
+        verbose_name = "Teilnahmeantrag"
+        verbose_name_plural = "Teilnahmeanträge"
 
 class Bewertung(models.Model):
     antrag = models.ForeignKey(Teilnahmeantrag, on_delete=models.CASCADE, related_name='bewertungen')
@@ -188,6 +200,8 @@ class Bewertung(models.Model):
 
     class Meta:
         unique_together = ('antrag', 'kriterium')  # one score per criterion per application
+        verbose_name = "Bewertung"
+        verbose_name_plural = "Bewertungen"
 
     def __str__(self):
         return f"{self.antrag} - {self.kriterium.text[:20]}: {self.punkte}"

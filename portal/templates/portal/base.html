@@ -69,7 +69,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: auto;
             padding: 2rem 1rem;
         }
@@ -98,13 +98,59 @@
             color: var(--primary);
             font-weight: 500;
         }
-         /* ─── NEU: Tabellen global formatieren ─── */
          table {
-            width: 100%;            /* Immer volle Breite des Elterncontainers */
+            width: 100%;           
             table-layout: auto;
             border-collapse: collapse;
             margin-top: 1rem;
         }
+        table.custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+        }
+        table.custom-table thead th {
+        background-color: #f4f4f4;
+        text-align: left;
+        padding: 0.75rem;
+        border-bottom: 2px solid #ddd;
+        }
+        table.custom-table tbody td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #eee;
+        vertical-align: top;
+        }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    .form-group small {
+      color: #555;
+      margin-top: 0.25rem;
+    }
+    .form-group .field-error {
+      color: red;
+      margin-top: 0.25rem;
+      font-size: 0.9rem;
+    }
+
 
         th, td {
             padding: 0.75rem;
