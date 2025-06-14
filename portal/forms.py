@@ -184,67 +184,74 @@ class TeilnahmeantragForm(forms.ModelForm):
         return file
 
 class BewertungForm(forms.Form):
-    """
-    Dynamically built: fields will be added in the view for each Kriterium of the Projekt.
-    Field names: f"punkte_{k_id}", optional f"kommentar_{k_id}".
-    """
-
-    def __init__(self, *args, antrag=None, **kwargs):
+    def __init__(self, *args, antrag: Teilnahmeantrag = None, **kwargs):
         """
-        antrag: the Teilnahmeantrag instance to score.
+        Dynamically add fields for each Kriterium of antrag.projekt.
+        Expect: Projekt has related_name 'kriterien' for its Kriterien objects,
+        each with .pk and .text.
         """
         super().__init__(*args, **kwargs)
+        self.antrag = antrag
         if antrag is None:
-            return
-        projekt = antrag.projekt
-        if not projekt:
-            return
-        # Fetch all criteria for this projekt
-        kriterien = Kriterium.objects.filter(projekt=projekt).order_by('id')
-        # If existing Bewertungen exist, build a dict for initial values:
-        existing = {b.kriterium_id: b for b in antrag.bewertungen.all()}
-        for kriterium in kriterien:
-            field_name = f"punkte_{kriterium.pk}"
-            max_p = kriterium.max_punkte or 10
-            initial_punkte = existing.get(kriterium.pk).punkte if kriterium.pk in existing else None
-            self.fields[field_name] = forms.IntegerField(
+            return  # nothing to add
+
+        # Load existing saved scores to pre-fill
+        existing: dict = antrag.bewertungen_data or {}
+
+        for kriterium in antrag.projekt.kriterien.order_by('id'):
+            key = str(kriterium.pk)
+            # IntegerField for punkte
+            field_name_p = f"punkte_{key}"
+            # Use required=False so blank is allowed
+            initial_p = None
+            entry = existing.get(key)
+            if entry and isinstance(entry, dict):
+                initial_p = entry.get('punkte')
+            self.fields[field_name_p] = forms.IntegerField(
                 label=kriterium.text,
-                min_value=0,
-                max_value=max_p,
-                initial=initial_punkte,
-                required=True,
-                help_text=f"0 bis {max_p}"
-            )
-            # Optional: comment field
-            comment_field = f"kommentar_{kriterium.pk}"
-            init_comment = existing.get(kriterium.pk).kommentar if kriterium.pk in existing else ''
-            self.fields[comment_field] = forms.CharField(
-                label=f"Kommentar zu „{kriterium.text[:30]}“",
-                initial=init_comment,
+                min_value=0, max_value=10,
                 required=False,
-                widget=forms.Textarea(attrs={'rows': 2})
+                initial=initial_p,
+                help_text="0–10"
             )
 
-    def save(self, antrag):
+            # CharField for kommentar
+            field_name_c = f"kommentar_{key}"
+            initial_c = ''
+            if entry and isinstance(entry, dict):
+                initial_c = entry.get('kommentar', '')
+            self.fields[field_name_c] = forms.CharField(
+                label="",  # label can be empty or something like "Kommentar"
+                required=False,
+                initial=initial_c,
+                widget=forms.TextInput(attrs={'placeholder': 'Kommentar (optional)'})
+            )
+
+    def save(self, antrag: Teilnahmeantrag):
         """
-        Read cleaned_data and create/update Bewertung instances for this Antrag.
+        Save or update Bewertung instances for this Antrag.
         """
-        # For each field in cleaned_data, find those starting with 'punkte_'
-        for name, value in self.cleaned_data.items():
-            if name.startswith("punkte_"):
-                _, k_id_str = name.split("_", 1)
-                try:
-                    k_id = int(k_id_str)
-                except ValueError:
-                    continue
-                punkte = value
-                # find comment:
-                comment_key = f"kommentar_{k_id}"
-                kommentar = self.cleaned_data.get(comment_key, "")
-                kriterium = Kriterium.objects.get(pk=k_id)
+        projekt = antrag.projekt
+        # Optionally: delete old Bewertungen not in this set, or update existing
+        # A simple approach: for each kriterium, update_or_create; and optionally remove others.
+        saved_keys = []
+        for kriterium in projekt.kriterien.all():
+            key = str(kriterium.pk)
+            p_val = self.cleaned_data.get(f"punkte_{key}")
+            c_val = self.cleaned_data.get(f"kommentar_{key}", '').strip()
+            if p_val is not None:
+                # update existing or create new
                 bewertung_obj, created = Bewertung.objects.update_or_create(
-                    antrag=antrag, kriterium=kriterium,
-                    defaults={'punkte': punkte, 'kommentar': kommentar}
+                    antrag=antrag,
+                    kriterium=kriterium,
+                    defaults={'punkte': p_val, 'kommentar': c_val}
                 )
-        # Optionally return something
-        return
+                saved_keys.append(bewertung_obj.pk)
+        # Optionally: remove Bewertungen for this Antrag for Kriterien no longer present or set to None:
+        # E.g.:
+        # Projekt’s kriterium IDs:
+        kriterium_ids = [k.pk for k in projekt.kriterien.all()]
+        # Delete any Bewertung entries for this antrag with kriterium not in kriterium_ids or where cleaned_data had None
+        # For instance:
+        Bewertung.objects.filter(antrag=antrag).exclude(kriterium__pk__in=kriterium_ids).delete()
+        return antrag    

@@ -183,8 +183,11 @@ class Teilnahmeantrag(models.Model):
 
     # NEW: dynamic answers to Fragen
     from django.db.models import JSONField
-    antworten = JSONField(blank=True, default=dict, help_text="Speichert die Antworten auf projektspezifische Fragen als JSON")
-
+    antworten = JSONField(blank=True, default=dict, help_text="...")
+    bewertungen_data = JSONField(
+        blank=True, default=dict,
+        help_text="Speichert die Punkte/Kommentare aus Bewertungen"
+    )
     erstellt_am = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f"{self.firmenname} ({self.ansprechpartner})"
@@ -197,6 +200,7 @@ class Bewertung(models.Model):
     kriterium = models.ForeignKey(Kriterium, on_delete=models.CASCADE, related_name='bewertungen')
     punkte = models.PositiveSmallIntegerField()
     kommentar = models.TextField(blank=True, null=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     class Meta:
         unique_together = ('antrag', 'kriterium')  # one score per criterion per application

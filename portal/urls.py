@@ -33,6 +33,8 @@ urlpatterns = [
     # path('api/projekt/<int:projekt_pk>/fragen/', views.projekt_fragen_api, name='projekt_fragen_api'),
     path('api/projekt/<int:pk>/fragen/', views.projekt_fragen_api, name='projekt_fragen_api'),
     path('antrag/<int:pk>/bewerten/', views.antrag_bewerten, name='antrag_bewerten'),
+    path('bewertungen/', views.bewertungen_liste, name='bewertungen_liste'),
+    path('bewertungen/<int:pk>/', views.bewertung_detail, name='bewertung_detail'),
 
 
 

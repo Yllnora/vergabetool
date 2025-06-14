@@ -182,6 +182,7 @@
                     <a href="{% url 'antrag' %}">Antrag stellen</a>
                 {% elif user.role == "Vergabestelle" %}
                     <a href="{% url 'antrag_liste' %}">Anträge</a>
+                    <a href="{% url 'bewertungen_liste' %}">Bewertungen</a>
                 {% endif %}
                 <a href="{% url 'dashboard' %}">Dashboard</a>
                 <a href="{% url 'logout' %}">Logout</a>

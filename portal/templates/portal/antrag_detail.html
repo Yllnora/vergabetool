@@ -1,6 +1,6 @@
 {% extends 'portal/base.html' %}
 {% load static %}
-
+{% load json_extras %} {# for dict_get #}
 {% block title %}Antrag: {{ antrag.firmenname }}{% endblock %}
 
 {% block content %}
@@ -109,6 +109,55 @@
                 <li>Keine projektbezogenen Antworten vorhanden.</li>
             {% endfor %}
         </ul>
+    </div>
+
+    {# Abschnitt Bewertung #}
+    <div style="margin-top: 2rem;">
+        <h3>Bewertung</h3>
+        {% if bewertungen %}
+            {% if kriterien %}
+            <table style="width:100%; border-collapse:collapse; margin-top:0.5rem;">
+                <thead>
+                    <tr style="background:#f4f4f4;">
+                        <th style="padding:0.75rem; text-align:left;">Kriterium</th>
+                        <th style="padding:0.75rem; text-align:left;">Punkte</th>
+                        <th style="padding:0.75rem; text-align:left;">Kommentar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kriterium in kriterien %}
+                        {% with key=kriterium.pk|stringformat:"s" %}
+                            {% with entry=bewertungen|dict_get:key %}
+                                {% if entry %}
+                                <tr>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ kriterium.text }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd; width:80px;">{{ entry.punkte }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ entry.kommentar|default:"–" }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ kriterium.text }}</td>
+                                    <td colspan="2" style="padding:0.75rem; border-bottom:1px solid #ddd; color:gray;">
+                                        Keine Bewertung abgegeben
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endwith %}
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>Für dieses Projekt sind keine Kriterien definiert.</p>
+            {% endif %}
+        {% else %}
+            <p>Für diesen Antrag liegt noch keine Bewertung vor.</p>
+            {% if user.role == "Vergabestelle" %}
+            <a href="{% url 'antrag_bewerten' antrag.pk %}">
+                <button>Bewertung hinzufügen</button>
+            </a>
+            {% endif %}
+        {% endif %}
     </div>
 
     {# Bewertung-Link, nur für Vergabestelle #}

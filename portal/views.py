@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
-from django.db.models import Q
+from django.db.models import Q, Max
 from django.utils import timezone
 import zipfile
 import io
@@ -209,21 +209,18 @@ def antrag_bewerten(request, pk):
     else:
         form = BewertungForm(antrag=antrag)
 
-    # Erzeuge kriterium_pairs aus form und den Kriterium-Objekten
+    # Prepare pairs for template if you prefer that style
     kriterium_pairs = []
     for kriterium in projekt.kriterien.order_by('id'):
-        # Feldnamen wie in BewertungForm __init__: "punkte_<pk>" und "kommentar_<pk>"
-        feld_punkte = f"punkte_{kriterium.pk}"
-        feld_kommentar = f"kommentar_{kriterium.pk}"
-        # form[feldname] liefert BoundField (Widget + Fehler + value)
-        if feld_punkte in form.fields:
-            punkte_field = form[feld_punkte]
-            comment_field = form[feld_kommentar] if feld_kommentar in form.fields else None
-            kriterium_pairs.append({
-                'label': kriterium.text,
-                'punkte_field': punkte_field,
-                'comment_field': comment_field,
-            })
+        key = str(kriterium.pk)
+        punkte_field = form[f"punkte_{key}"]
+        comment_field = form[f"kommentar_{key}"]
+        kriterium_pairs.append({
+            'label': kriterium.text,
+            'punkte_field': punkte_field,
+            'comment_field': comment_field,
+        })
+
     return render(request, 'portal/antrag_bewertung.html', {
         'antrag': antrag,
         'form': form,
@@ -288,14 +285,54 @@ def antrag_liste(request):
 
 @login_required
 def antrag_detail(request, pk):
-    if request.user.role == 'Vergabestelle':
-        antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
-        return render(request, 'portal/antrag_detail.html', {
-            'antrag': antrag,
-            'bewertung': "Bewertung folgt…"  # Platzhalter
-        })
-    else:
+    antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
+    # Berechtigung wie gehabt...
+    raw = getattr(antrag, 'bewertungen_data', None)
+    # Falls raw None oder {} oder leeres Dict: keine Bewertung
+    has_bewertung = bool(raw)  # True nur, wenn raw ein nicht-leeres Dict ist
+    bewertungen = raw if has_bewertung else {}
+    kriterien = antrag.projekt.kriterien.all()
+    return render(request, 'portal/antrag_detail.html', {
+        'antrag': antrag,
+        'bewertungen': bewertungen,
+        'has_bewertung': has_bewertung,
+        'kriterien': kriterien,
+    })
+
+
+@login_required
+def bewertungen_liste(request):
+    if request.user.role != 'Vergabestelle':
         return redirect('dashboard')
+    # Find all Anträge that have ≥1 Bewertung, annotate with the latest timestamp:
+    antraege = (
+        Teilnahmeantrag.objects
+        .filter(bewertungen__isnull=False)
+        .annotate(letzte=Max('bewertungen__erstellt_am'))
+        .order_by('-letzte')
+        .distinct()
+    )
+    return render(request, 'portal/bewertungen_liste.html', {
+        'antraege': antraege,
+    })
+
+@login_required
+def bewertung_detail(request, pk):
+    antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
+    if request.user.role != 'Vergabestelle':
+        return redirect('dashboard')
+    # Get all Kriterien for this project:
+    kriterien = antrag.projekt.kriterien.all()
+    # Fetch Bewertungen queryset:
+    bewertungen_qs = antrag.bewertungen.select_related('kriterium').order_by('kriterium__id')
+    # Build a dict {kriterium.pk: bewertung_obj} for template convenience:
+    bewertungen_dict = { str(b.kriterium.pk): b for b in bewertungen_qs }
+    return render(request, 'portal/bewertung_detail.html', {
+        'antrag': antrag,
+        'kriterien': kriterien,
+        'bewertungen': bewertungen_dict,
+    })
+
 
 
 @login_required
