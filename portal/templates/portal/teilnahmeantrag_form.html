@@ -1,105 +1,66 @@
-{# portal/templates/portal/teilnahmeantrag_form.html #}
 {% extends 'portal/base.html' %}
-{% load static %}
 {% block title %}Teilnahmeantrag – Formular{% endblock %}
-
 {% block content %}
 <div class="form-container">
-  <div class="logo">
-    <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
-  </div>
-
   <h2>Teilnahmeantrag – Teil 1 bis 4</h2>
-
-  <form method="POST" enctype="multipart/form-data" id="antrag-form">
+  <form method="POST" enctype="multipart/form-data">
     {% csrf_token %}
-
-    {# 1. Projekt‐Dropdown #}
-    <div class="form-group" style="margin-bottom:1.5rem;">
-      <label for="{{ form.projekt.id_for_label }}">
-        {{ form.projekt.label }}
-        {% if form.projekt.field.required %}<span style="color:red;">*</span>{% endif %}
-      </label><br>
+    {{ form.non_field_errors }}
+    {# Projekt dropdown #}
+    <div class="form-group">
+      {{ form.projekt.label_tag }}{% if form.projekt.field.required %}<span style="color:red;">*</span>{% endif %}
       {{ form.projekt }}
-      {% if form.projekt.help_text %}
-        <small style="color:#555;">{{ form.projekt.help_text }}</small>
-      {% endif %}
-      {% for error in form.projekt.errors %}
-        <div class="text-danger" style="color:red;">{{ error }}</div>
-      {% endfor %}
+      {{ form.projekt.errors }}
     </div>
-
-    {# 2. Container für dynamische Fragen-Felder #}
-    <div id="dynamic-questions">
-      {% for field in form %}
-        {# Prüfe, ob der Feldname mit "frage_" beginnt #}
-        {% if field.name|slice:":6" == "frage_" %}
-          <div class="form-group" style="margin-bottom:1.5rem;">
-            <label for="{{ field.id_for_label }}">
-              {{ field.label }}
-              {% if field.field.required %}<span style="color:red;">*</span>{% endif %}
-            </label><br>
-            {{ field }}
-            {% if field.help_text %}
-              <small style="color:#555;">{{ field.help_text }}</small>
-            {% endif %}
-            {% for error in field.errors %}
-              <div class="text-danger" style="color:red;">{{ error }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endfor %}
+    {# Firmenname & Adresse #}
+    <div class="form-group">
+      {{ form.firmenname.label_tag }}{% if form.firmenname.field.required %}<span style="color:red;">*</span>{% endif %}
+      {{ form.firmenname }}
+      {{ form.firmenname.errors }}
     </div>
+    <div class="form-group">
+      {{ form.adresse.label_tag }}{% if form.adresse.field.required %}<span style="color:red;">*</span>{% endif %}
+      {{ form.adresse }}
+      {{ form.adresse.errors }}
+    </div>
+    {# Placeholder for dynamic Fragen: #}
+    <div id="dynamic-questions"></div>
 
-    {# 3. Restliche statische Felder (alle außer 'projekt' und 'frage_*') #}
+    {# The rest of fields #}
     {% for field in form %}
-      {% if field.name != 'projekt' and field.name|slice:":6" != "frage_" %}
-        <div class="form-group" style="margin-bottom:1.5rem;">
-          <label for="{{ field.id_for_label }}">
-            {{ field.label }}
-            {% if field.field.required %}<span style="color:red;">*</span>{% endif %}
-          </label><br>
+      {% if field.name != 'projekt' and field.name != 'firmenname' and field.name != 'adresse' %}
+        <div class="form-group">
+          {{ field.label_tag }}{% if field.field.required %}<span style="color:red;">*</span>{% endif %}
           {{ field }}
           {% if field.help_text %}
             <small style="color:#555;">{{ field.help_text }}</small>
           {% endif %}
-          {% for error in field.errors %}
-            <div class="text-danger" style="color:red;">{{ error }}</div>
-          {% endfor %}
+          {{ field.errors }}
         </div>
       {% endif %}
     {% endfor %}
 
-    <button type="submit" style="background-color:#1c3c57; color:white; padding:0.6rem 1.2rem; border:none; border-radius:4px;">
-      Antrag absenden
-    </button>
+    <button type="submit">Antrag absenden</button>
   </form>
-
-  <br>
   <a href="{% url 'dashboard' %}">Zurück zum Dashboard</a>
 </div>
 
-{# 4. JavaScript zum Nachladen der Fragen beim Ändern des Projekt-Auswahlfeldes #}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const projektSelect = document.getElementById("id_projekt");
     const dynamicDiv = document.getElementById("dynamic-questions");
-
     function clearDynamicQuestions() {
         dynamicDiv.innerHTML = "";
     }
-
     function renderQuestionField(q) {
         const wrapper = document.createElement('div');
         wrapper.classList.add('form-group');
         wrapper.style.marginBottom = '1.5rem';
-
         const label = document.createElement('label');
         label.setAttribute('for', `id_frage_${q.id}`);
         label.innerText = q.text;
         wrapper.appendChild(label);
         wrapper.appendChild(document.createElement('br'));
-
         let input;
         if (q.field_type === 'boolean') {
             input = document.createElement('input');
@@ -117,7 +78,6 @@ document.addEventListener('DOMContentLoaded', function(){
         }
         return wrapper;
     }
-
     async function loadFragen(projektId) {
         if (!projektId) {
             clearDynamicQuestions();
@@ -144,15 +104,16 @@ document.addEventListener('DOMContentLoaded', function(){
             clearDynamicQuestions();
         }
     }
-
-    projektSelect.addEventListener('change', function(){
-        const projektId = this.value;
-        loadFragen(projektId);
-    });
-
-    // Falls bereits Fragen gerendert wurden (z.B. bei Bindungsfehlern), lass sie stehen.
-    // Wenn Du bei jedem Laden via AJAX neu holen willst, kannst Du hier aufrufen:
-    // if (projektSelect.value) { loadFragen(projektSelect.value); }
+    if (projektSelect) {
+      projektSelect.addEventListener('change', function(){
+          const projektId = this.value;
+          loadFragen(projektId);
+      });
+      // Optionally load on page load if editing or bound with initial:
+      if (projektSelect.value) {
+          loadFragen(projektSelect.value);
+      }
+    }
 });
 </script>
 {% endblock %}

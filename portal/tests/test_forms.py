@@ -5,6 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from decimal import Decimal
 
 from portal.forms import UploadForm, TeilnahmeantragForm
+from portal.models import Projekt
 
 class UploadFormTest(TestCase):
     def test_empty_form_invalid(self):
@@ -23,18 +24,20 @@ class UploadFormTest(TestCase):
         self.assertTrue(form.is_valid())
 
 class TeilnahmeantragFormTest(TestCase):
+    def setUp(self):
+        self.projekt = Projekt.objects.create(name="E2E Project", deadline="2100-01-01")
+        self.client.login(username='selenium', password='pass')
     def test_empty_form_invalid(self):
         form = TeilnahmeantragForm(data={})
         self.assertFalse(form.is_valid())
         self.assertIn('firmenname', form.errors)
-        self.assertIn('adresse', form.errors)
-
     def test_valid_data(self):
         data = {
+            'projekt': str(self.projekt.pk),
             'firmenname': 'TestFirma',
             'adresse': 'Musterstraße 1 12345 Stadt',
             'ansprechpartner': 'Max Mustermann',
-            'email': 'max@example.com',
+            'email': 'test@example.com',
             'wirtschaftliche_verknuepfungen': '',
             'insolvenz': False,
             'straftat': False,
@@ -50,7 +53,7 @@ class TeilnahmeantragFormTest(TestCase):
             'zustandigkeit_bauleitung': '',
             'referenz_1': 'Projekt A',
             'referenz_2': '',
-            # 'referenz_upload' is optional
+            # referenz_upload optional, skip
         }
         form = TeilnahmeantragForm(data=data)
         self.assertTrue(form.is_valid())

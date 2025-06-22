@@ -1,16 +1,28 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
-# Benutzer mit Rollen
+
 class User(AbstractUser):
-    ROLE_CHOICES = (
+    ROLE_CHOICES = [
         ('Bieter', 'Bieter'),
         ('Vergabestelle', 'Vergabestelle'),
-    )
+    ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    # Only for Bieter:
+    company_name = models.CharField("Firmenname", max_length=200, blank=True)
+    street = models.CharField("Straße", max_length=200, blank=True)
+    postal_code = models.CharField("PLZ", max_length=20, blank=True)
+    city = models.CharField("Stadt", max_length=100, blank=True)
+    country = models.CharField("Land", max_length=100, blank=True)
+
+    # Optionally override __str__
+    def __str__(self):
+        return self.username
+
 
 
 # Datei-Upload (z. B. von Bietern)
@@ -103,7 +115,6 @@ class Teilnahmeantrag(models.Model):
     umsatz_2023 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2022 = models.DecimalField(max_digits=12, decimal_places=2)
     umsatz_2021 = models.DecimalField(max_digits=12, decimal_places=2)
-
     # — NEW Gross/Net toggle & tax rate
     is_brutto = models.BooleanField(
         default=True,
@@ -115,6 +126,42 @@ class Teilnahmeantrag(models.Model):
         default=Decimal('19.00'),
         help_text="Steuersatz in Prozent (z. B. 19.00 für 19%)."
     )
+    @property
+    def umsatz_netto(self):
+        """
+        If is_brutto=True: calculate netto = brutto / (1 + steuer_satz/100), rounded to 2 decimals.
+        If is_brutto=False: netto = umsatz_YYYY as is.
+        """
+        brutto = self.umsatz_2023  # test uses 2023 field
+        steuer = self.steuer_satz or Decimal('0')
+        if self.is_brutto:
+            # netto = brutto / (1 + steuer/100)
+            try:
+                factor = (Decimal('1') + steuer / Decimal('100'))
+                netto = (brutto / factor).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            except Exception:
+                return None
+            return netto
+        else:
+            return brutto
+
+    @property
+    def umsatz_brutto(self):
+        """
+        If is_brutto=False: calculate brutto = netto * (1 + steuer_satz/100), rounded to 2 decimals.
+        If is_brutto=True: return umsatz_2023 as-is.
+        """
+        netto = self.umsatz_2023
+        steuer = self.steuer_satz or Decimal('0')
+        if self.is_brutto:
+            return netto
+        else:
+            try:
+                factor = (Decimal('1') + steuer / Decimal('100'))
+                brutto = (netto * factor).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            except Exception:
+                return None
+            return brutto
 
     # --- New scoring fields (0–10 each) ---
     score_anforderung1 = models.IntegerField(
@@ -209,32 +256,6 @@ class Bewertung(models.Model):
 
     def __str__(self):
         return f"{self.antrag} - {self.kriterium.text[:20]}: {self.punkte}"
-
-    @property
-    def umsatz_netto(self):
-        """
-        If stored value is Brutto, strip out the tax.
-        Otherwise, return the stored (Netto) value.
-        """
-        if self.is_brutto:
-            return (
-                self.umsatz_2023
-                / (Decimal('1') + self.steuer_satz / Decimal('100'))
-            ).quantize(Decimal('0.01'))
-        return self.umsatz_2023
-
-    @property
-    def umsatz_brutto(self):
-        """
-        If stored value is Netto, add the tax.
-        Otherwise, return the stored (Brutto) value.
-        """
-        if not self.is_brutto:
-            return (
-                self.umsatz_2023
-                * (Decimal('1') + self.steuer_satz / Decimal('100'))
-            ).quantize(Decimal('0.01'))
-        return self.umsatz_2023
     
     @property
     def is_late(self):

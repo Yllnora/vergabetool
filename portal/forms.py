@@ -1,5 +1,6 @@
 from django import forms
-from .models import Upload, Teilnahmeantrag, Projekt, Frage, Kriterium, Bewertung
+from .models import Upload, Teilnahmeantrag, Projekt, Frage, Kriterium, Bewertung, User
+from django.contrib.auth.forms import UserCreationForm
 
 class UploadForm(forms.ModelForm):
     class Meta:
@@ -23,6 +24,7 @@ class TeilnahmeantragBewertungForm(forms.ModelForm):
             'score_anforderung2': forms.NumberInput(attrs={'min': 0, 'max': 10}),
         }
 
+
 class TeilnahmeantragForm(forms.ModelForm):
     class Meta:
         model = Teilnahmeantrag
@@ -37,19 +39,16 @@ class TeilnahmeantragForm(forms.ModelForm):
             'insolvenz',
             'straftat',
             'fehlende_abgaben',
-
             # Teil 2
             'umsatz_2023',
             'umsatz_2022',
             'umsatz_2021',
             'berufshaftpflicht_vorhanden',
             'berufshaftpflicht_nachweis',
-
             # Teil 3
             'projektleitung',
             'team_groesse',
             'zustandigkeit_bauleitung',
-
             # Teil 4
             'referenz_1',
             'referenz_2',
@@ -61,12 +60,11 @@ class TeilnahmeantragForm(forms.ModelForm):
             'wirtschaftliche_verknuepfungen': forms.Textarea(attrs={'rows': 3}),
             'referenz_1': forms.Textarea(attrs={'rows': 3}),
             'referenz_2': forms.Textarea(attrs={'rows': 3}),
-            'umsatz_2023': forms.NumberInput(attrs={'placeholder': 'z. B. 2500000 (€)'}),
-            'umsatz_2022': forms.NumberInput(attrs={'placeholder': 'z. B. 2000000 (€)'}),
-            'umsatz_2021': forms.NumberInput(attrs={'placeholder': 'z. B. 1500000 (€)'}),
-            'team_groesse': forms.NumberInput(attrs={'placeholder': 'z. B. 5'}),
+            'umsatz_2023': forms.NumberInput(attrs={'placeholder': 'z. B. 2500000 (€)'}),
+            'umsatz_2022': forms.NumberInput(attrs={'placeholder': 'z. B. 2000000 (€)'}),
+            'umsatz_2021': forms.NumberInput(attrs={'placeholder': 'z. B. 1500000 (€)'}),
+            'team_groesse': forms.NumberInput(attrs={'placeholder': 'z. B. 5'}),
             'referenz_upload': forms.ClearableFileInput(attrs={'accept': '.pdf'}),
-            
         }
         labels = {
             'team_groesse': 'Team-Größe',
@@ -77,20 +75,45 @@ class TeilnahmeantragForm(forms.ModelForm):
             'umsatz_2023': 'Angabe in Euro (€)',
             'umsatz_2022': 'Angabe in Euro (€)',
             'umsatz_2021': 'Angabe in Euro (€)',
-            'team_größe': 'Anzahl der Personen im Projektteam',
+            'team_groesse': 'Anzahl der Personen im Projektteam',
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         """
-        Dynamically add fields for each Frage of the selected Projekt.
-        On GET: if editing instance with a projekt, or if initial data contains projekt,
-          add those fields so template can render them.
-        On POST: self.data has 'projekt', so we add fields before validation.
+        Accept user to pre-fill firmenname and adresse.
+        Also dynamically add question fields for the selected Projekt.
         """
+        self.user = user
         super().__init__(*args, **kwargs)
 
+        # If no initial for firmenname/adresse provided by caller, fill from user profile:
+        if not self.is_bound and user is not None:
+            # adapt attribute names to your User model: company_name, street, postal_code, city, country
+            initial = {}
+            if hasattr(user, 'company_name') and user.company_name:
+                initial['firmenname'] = user.company_name
+            # combine address parts:
+            parts = []
+            if hasattr(user, 'street') and user.street:
+                parts.append(user.street)
+            city_parts = []
+            if hasattr(user, 'postal_code') and user.postal_code:
+                city_parts.append(user.postal_code)
+            if hasattr(user, 'city') and user.city:
+                city_parts.append(user.city)
+            if city_parts:
+                parts.append(" ".join(city_parts))
+            if hasattr(user, 'country') and user.country:
+                parts.append(user.country)
+            if parts and 'adresse' not in self.initial:
+                initial['adresse'] = ", ".join(parts)
+            # apply initial if fields exist and not already in initial:
+            for fname, val in initial.items():
+                if fname in self.fields and not self.initial.get(fname):
+                    self.initial[fname] = val
+
+        # Determine the Projekt instance to load Fragen, both on GET (unbound) and POST (bound)
         projekt = None
-        # 1) If bound form, get projekt from data
         if self.is_bound:
             projekt_id = self.data.get('projekt')
             if projekt_id:
@@ -99,64 +122,44 @@ class TeilnahmeantragForm(forms.ModelForm):
                 except Projekt.DoesNotExist:
                     projekt = None
         else:
-            # Not bound: maybe editing existing instance
             if self.instance and getattr(self.instance, 'projekt', None):
                 projekt = self.instance.projekt
 
-        # If we have a projekt, fetch its Fragen and add corresponding form fields
+        # Dynamically add fields for each Frage of the Projekt
         if projekt:
-            fragen_qs = projekt.fragen.all()
-            for frage in fragen_qs:
+            for frage in projekt.fragen.all():
                 field_name = f"frage_{frage.pk}"
                 label = frage.text
                 if frage.field_type == Frage.FIELD_TYPE_BOOLEAN:
-                    self.fields[field_name] = forms.BooleanField(
-                        label=label,
-                        required=False
-                    )
-                    
+                    self.fields[field_name] = forms.BooleanField(label=label, required=False)
                     if self.instance and isinstance(self.instance.antworten, dict):
                         existing = self.instance.antworten.get(str(frage.pk))
-                        
                         if existing is not None:
                             self.initial[field_name] = existing
                 elif frage.field_type == Frage.FIELD_TYPE_TEXT:
                     self.fields[field_name] = forms.CharField(
-                        label=label,
-                        required=False,
+                        label=label, required=False,
                         widget=forms.Textarea(attrs={'rows': 2})
                     )
                     if self.instance and isinstance(self.instance.antworten, dict):
                         existing = self.instance.antworten.get(str(frage.pk))
                         if existing is not None:
                             self.initial[field_name] = existing
-                else:
-                    
-                    pass
+                # add more types if needed
 
     def clean(self):
-        """
-        Collect dynamic question answers into a dict and assign to instance.antworten.
-        """
         cleaned_data = super().clean()
         projekt = cleaned_data.get('projekt')
         if projekt:
             antworten = {}
-            # For each Frage of that projekt, pick out cleaned_data[f"frage_{id}"]
             for frage in projekt.fragen.all():
                 key = f"frage_{frage.pk}"
-                # If field wasn't added to form (e.g. invalid projekt), skip
-                if key in self.fields:
+                if key in cleaned_data:
                     antworten[str(frage.pk)] = cleaned_data.get(key)
-            # Attach to instance
             self.instance.antworten = antworten
         return cleaned_data
 
     def save(self, commit=True):
-        """
-        Ensure instance.user is set by view before save.
-        The dynamic antworten JSON was set in clean().
-        """
         instance = super().save(commit=False)
         # instance.antworten already set in clean()
         if commit:
@@ -170,7 +173,7 @@ class TeilnahmeantragForm(forms.ModelForm):
             if not name.endswith('.pdf'):
                 raise forms.ValidationError("Bitte laden Sie ein PDF-Dokument hoch.")
             if "versicherung" not in name and "haftpflicht" not in name:
-                raise forms.ValidationError("Dateiname sollte z. B. 'Versicherungsnachweis.pdf' enthalten.")
+                raise forms.ValidationError("Dateiname sollte z. B. 'Versicherungsnachweis.pdf' enthalten.")
         return file
 
     def clean_referenz_upload(self):
@@ -180,8 +183,44 @@ class TeilnahmeantragForm(forms.ModelForm):
             if not name.endswith('.pdf'):
                 raise forms.ValidationError("Nur PDF-Dateien sind erlaubt.")
             if "referenz" not in name and "projekt" not in name:
-                raise forms.ValidationError("Bitte benennen Sie die Datei z. B. als 'Referenz_Projektname.pdf'.")
+                raise forms.ValidationError("Bitte benennen Sie die Datei z. B. als 'Referenz_Projektname.pdf'.")
         return file
+
+
+class UserRegisterForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=User.ROLE_CHOICES, required=True)
+    # Bieter-only fields; we’ll show/hide in template/JS or validate in clean()
+    company_name = forms.CharField(label="Firmenname", required=False)
+    street = forms.CharField(label="Straße", required=False)
+    postal_code = forms.CharField(label="PLZ", required=False)
+    city = forms.CharField(label="Stadt", required=False)
+    country = forms.CharField(label="Land", required=False)
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2', 'role',
+                  'company_name', 'street', 'postal_code', 'city', 'country']
+
+    def clean(self):
+        cleaned = super().clean()
+        role = cleaned.get('role')
+        # If Bieter, require those fields:
+        if role == 'Bieter':
+            missing = []
+            for fld in ['company_name','street','postal_code','city','country']:
+                if not cleaned.get(fld):
+                    missing.append(fld)
+            if missing:
+                raise forms.ValidationError("Für Bieter bitte alle Profilfelder ausfüllen.")
+        return cleaned
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        # Fields are set by form
+        if commit:
+            user.save()
+        return user
 
 class BewertungForm(forms.Form):
     def __init__(self, *args, antrag: Teilnahmeantrag = None, **kwargs):
