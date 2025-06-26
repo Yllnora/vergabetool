@@ -7,9 +7,7 @@ from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.db.models import Q, Max
 from django.utils import timezone
-import zipfile
-import io
-import os
+from .forms import UserRegisterForm, UploadForm, TeilnahmeantragForm, BewertungForm
 import string
 
 from django.http import JsonResponse
@@ -27,16 +25,17 @@ def welcome(request):
     return render(request, 'portal/welcome.html')
 
 
+
 def user_register(request):
     if request.method == 'POST':
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password']
-        role = request.POST['role']
-        user = User.objects.create_user(username=username, email=email, password=password, role=role)
-        messages.success(request, 'Registrierung erfolgreich! Bitte einloggen.')
-        return redirect('login')
-    return render(request, 'portal/register.html')
+        form = UserRegisterForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            messages.success(request, 'Registrierung erfolgreich! Bitte einloggen.')
+            return redirect('login')
+    else:
+        form = UserRegisterForm()
+    return render(request, 'portal/register.html', {'form': form})
 
 
 def user_login(request):
@@ -168,24 +167,27 @@ def user_logout(request):
     logout(request)
     return redirect('login')
 
-
 @login_required
 def teilnahmeantrag_erstellen(request):
-    # Nur Bieter dürfen den Antrag stellen
     if request.user.role != 'Bieter':
         return redirect('dashboard')
 
+    # Prepare initial dict from user profile if desired; 
+    # but since form __init__ handles initial from user, you may omit passing initial here.
+    initial = {}
+    # (Optional) you could compute initial here, but form __init__ already does it.
+
     if request.method == 'POST':
-        form = TeilnahmeantragForm(request.POST, request.FILES)
+        form = TeilnahmeantragForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             antrag = form.save(commit=False)
             antrag.user = request.user
             antrag.save()
-            messages.success(request, "Ihr Teilnahmeantrag wurde erfolgreich eingereicht.")
             return redirect('danke')
     else:
-        form = TeilnahmeantragForm()
+        form = TeilnahmeantragForm(user=request.user)
     return render(request, 'portal/teilnahmeantrag_form.html', {'form': form})
+
 
 @login_required
 def antrag_bewerten(request, pk):
@@ -352,6 +354,12 @@ def antrag_json(request, pk):
     
     antrag = get_object_or_404(Teilnahmeantrag, pk=pk)
     data = {
+        "id": antrag.pk,
+        "projekt": {
+            "id": antrag.projekt.pk,
+            "name": antrag.projekt.name,
+            "deadline": antrag.projekt.deadline.isoformat() if antrag.projekt.deadline else None,
+        },
         "firmenname": antrag.firmenname,
         "ansprechpartner": antrag.ansprechpartner,
         "email": antrag.email,

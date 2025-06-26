@@ -13,10 +13,6 @@ urlpatterns = [
     path('dashboard/', login_required(views.user_dashboard), name='dashboard'),
     path('antrag/', login_required(views.teilnahmeantrag_erstellen), name='antrag'),
     path('danke/', login_required(views.danke), name='danke'),
-
-    path('antraege/', login_required(views.antrag_liste), name='antrag_liste'),
-    path('antraege/<int:pk>/', login_required(views.antrag_detail), name='antrag_detail'),
-
     path('antrag/<int:pk>/pdf/', login_required(views.antrag_pdf), name='antrag_pdf'),
     path('antrag/<int:pk>/json/', login_required(views.antrag_json), name='antrag_json'),
     path('antrag/<int:pk>/zip/', login_required(views.antrag_zip), name='antrag_zip'),
@@ -24,7 +20,6 @@ urlpatterns = [
     path('antrag/neu/', views.teilnahmeantrag_erstellen, name='teilnahmeantrag_erstellen'),
     path('antraege/', views.antrag_liste, name='antrag_liste'),
     path('antrag/<int:pk>/', views.antrag_detail, name='antrag_detail'),
-    path('antraege/index/', views.antrag_index, name='antrag_index'),
     path('antraege/', login_required(views.antrag_liste), name='antrag_liste'),
     path('kriterien/', login_required(views.kriterien_liste), name='kriterien_liste'),       # Platzhalter‐View
     path('auswertung/start/', login_required(views.auswertung_starten), name='auswertung_starten'),  # Platzhalter‐View
