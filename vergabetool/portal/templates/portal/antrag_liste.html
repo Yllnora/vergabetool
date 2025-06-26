@@ -1,0 +1,88 @@
+{% extends 'portal/base.html' %}
+{% block title %}Eingereichte Teilnahmeanträge{% endblock %}
+
+{% block content %}
+<h2>Eingereichte Teilnahmeanträge</h2>
+
+{# ─── Search form ─── #}
+<form method="GET" action="{% url 'antrag_liste' %}" style="margin-bottom:1.5rem;">
+    <input
+        type="text"
+        name="q"
+        placeholder="Suche nach Firma oder Adresse"
+        value="{{ search_query|default:'' }}"
+        style="padding:0.5rem; width:300px;"
+    />
+    <button type="submit" style="padding:0.5rem 1rem;">Suchen</button>
+</form>
+
+{# ─── Pool 1: On-time submissions ─── #}
+<h3>Rechtzeitig eingereichte Anträge</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Firma</th>
+            <th>Ansprechpartner</th>
+            <th>E-Mail</th>
+            <th>Projekt-Deadline</th>
+            <th>Erstellt am</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for antrag in on_time %}
+            <tr>
+                <td>
+                    <a href="{% url 'antrag_detail' antrag.pk %}">
+                        {{ antrag.firmenname }}
+                    </a>
+                </td>
+                <td>{{ antrag.ansprechpartner }}</td>
+                <td>{{ antrag.email }}</td>
+                <td>{{ antrag.projekt.deadline|date:"d.m.Y" }}</td>
+                <td>{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center;">
+                    Keine rechtzeitig eingereichten Anträge.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{# ─── Pool 2: Late submissions ─── #}
+<h3 style="margin-top:2rem;">Verspätet eingereichte Anträge</h3>
+<table>
+    <thead>
+        <tr>
+            <th>Firma</th>
+            <th>Ansprechpartner</th>
+            <th>E-Mail</th>
+            <th>Projekt-Deadline</th>
+            <th>Erstellt am</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for antrag in late %}
+            <tr style="background-color:#ffe6e6;">
+                <td>
+                    <a href="{% url 'antrag_detail' antrag.pk %}">
+                        {{ antrag.firmenname }}
+                    </a>
+                </td>
+                <td>{{ antrag.ansprechpartner }}</td>
+                <td>{{ antrag.email }}</td>
+                <td>{{ antrag.projekt.deadline|date:"d.m.Y" }}</td>
+                <td>{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center;">
+                    Keine verspäteten Anträge.
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

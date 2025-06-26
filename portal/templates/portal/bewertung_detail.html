@@ -1,0 +1,58 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% load json_extras %} {# for dict_get #}
+{% block title %}Bewertung: {{ antrag.firmenname }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin:2rem auto;">
+  <h2>Bewertung: {{ antrag.firmenname }}</h2>
+  <h3>Projekt: {{ antrag.projekt.name }}</h3>
+
+  <table style="width:100%; border-collapse: collapse; margin-top:1rem;">
+    <thead>
+      <tr style="background:#f4f4f4;">
+        <th style="text-align:left; padding:0.75rem;">Kriterium</th>
+        <th style="text-align:left; padding:0.75rem; width:80px;">Punkte</th>
+        <th style="text-align:left; padding:0.75rem;">Kommentar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for kriterium in kriterien %}
+        {# get string key for this kriterium.pk #}
+        {% with bid=kriterium.pk|stringformat:"s" %}
+          {% with entry=bewertungen|dict_get:bid %}
+            {% if entry %}
+              <tr>
+                <td style="padding:0.75rem; border-bottom:1px solid #ddd;">
+                  {{ kriterium.text }}
+                </td>
+                <td style="padding:0.75rem; border-bottom:1px solid #ddd;">
+                  {{ entry.punkte }}
+                </td>
+                <td style="padding:0.75rem; border-bottom:1px solid #ddd;">
+                  {{ entry.kommentar|default:"–" }}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td style="padding:0.75rem; border-bottom:1px solid #ddd;">
+                  {{ kriterium.text }}
+                </td>
+                <td colspan="2" style="padding:0.75rem; border-bottom:1px solid #ddd; color:gray;">
+                  Keine Bewertung abgegeben
+                </td>
+              </tr>
+            {% endif %}
+          {% endwith %}
+        {% endwith %}
+      {% empty %}
+        <tr><td colspan="3" style="padding:0.75rem;">Keine Kriterien definiert.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a href="{% url 'bewertungen_liste' %}" style="display:inline-block; margin-top:1rem;">
+    <button>Zurück zur Übersicht</button>
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% load json_extras %} {# for dict_get #}
+{% block title %}Antrag: {{ antrag.firmenname }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 2rem auto;">
+
+    <h2>Teilnahmeantrag – {{ antrag.firmenname }}</h2>
+
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <tbody>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4; width:30%;">Projekt</th>
+                <td style="padding:0.75rem;">{{ antrag.projekt.name }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Ansprechpartner</th>
+                <td style="padding:0.75rem;">{{ antrag.ansprechpartner }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">E-Mail</th>
+                <td style="padding:0.75rem;">{{ antrag.email }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Adresse</th>
+                <td style="padding:0.75rem;">{{ antrag.adresse|linebreaksbr }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Umsatz 2023</th>
+                <td style="padding:0.75rem;">{{ antrag.umsatz_2023 }} €</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Umsatz 2022</th>
+                <td style="padding:0.75rem;">{{ antrag.umsatz_2022 }} €</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Umsatz 2021</th>
+                <td style="padding:0.75rem;">{{ antrag.umsatz_2021 }} €</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Berufshaftpflicht vorhanden</th>
+                <td style="padding:0.75rem;">{{ antrag.berufshaftpflicht_vorhanden|yesno:"Ja,Nein" }}</td>
+            </tr>
+            {% if antrag.berufshaftpflicht_nachweis %}
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Berufshaftpflicht-Nachweis</th>
+                <td style="padding:0.75rem;">
+                    <a href="{{ antrag.berufshaftpflicht_nachweis.url }}" target="_blank">Download PDF</a>
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Projektleitung</th>
+                <td style="padding:0.75rem;">{{ antrag.projektleitung }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Team-Größe</th>
+                <td style="padding:0.75rem;">{{ antrag.team_groesse }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Zuständigkeit Bauleitung</th>
+                <td style="padding:0.75rem;">{{ antrag.zustandigkeit_bauleitung|default:"–" }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Wirtschaftliche Verknüpfungen</th>
+                <td style="padding:0.75rem;">{{ antrag.wirtschaftliche_verknuepfungen|linebreaksbr }}</td>
+            </tr>
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Referenz 1</th>
+                <td style="padding:0.75rem;">{{ antrag.referenz_1|linebreaksbr }}</td>
+            </tr>
+            {% if antrag.referenz_2 %}
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Referenz 2</th>
+                <td style="padding:0.75rem;">{{ antrag.referenz_2|linebreaksbr }}</td>
+            </tr>
+            {% endif %}
+            {% if antrag.referenz_upload %}
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Referenz-Dokument</th>
+                <td style="padding:0.75rem;">
+                    <a href="{{ antrag.referenz_upload.url }}" target="_blank">Download PDF</a>
+                </td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th style="text-align:left; padding:0.75rem; background:#f4f4f4;">Eingereicht am</th>
+                <td style="padding:0.75rem;">{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {# Abschnitt für projektbezogene Fragen & Antworten #}
+    <div style="margin-top: 2rem;">
+        <h3>Projektbezogene Fragen & Antworten</h3>
+        <ul>
+            {% for antwort in antrag.antworten.all %}
+                <li style="margin-bottom: 0.5rem;">
+                  <strong>{{ antwort.frage.text }}:</strong>
+                  {# If boolean, format yes/no; else show text #}
+                  {% if antwort.frage.field_type == 'boolean' %}
+                    {{ antwort.text|yesno:"Ja,Nein" }}
+                  {% else %}
+                    {{ antwort.text }}
+                  {% endif %}
+                </li>
+            {% empty %}
+                <li>Keine projektbezogenen Antworten vorhanden.</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    {# Abschnitt Bewertung #}
+    <div style="margin-top: 2rem;">
+        <h3>Bewertung</h3>
+        {% if bewertungen %}
+            {% if kriterien %}
+            <table style="width:100%; border-collapse:collapse; margin-top:0.5rem;">
+                <thead>
+                    <tr style="background:#f4f4f4;">
+                        <th style="padding:0.75rem; text-align:left;">Kriterium</th>
+                        <th style="padding:0.75rem; text-align:left;">Punkte</th>
+                        <th style="padding:0.75rem; text-align:left;">Kommentar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kriterium in kriterien %}
+                        {% with key=kriterium.pk|stringformat:"s" %}
+                            {% with entry=bewertungen|dict_get:key %}
+                                {% if entry %}
+                                <tr>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ kriterium.text }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd; width:80px;">{{ entry.punkte }}</td>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ entry.kommentar|default:"–" }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td style="padding:0.75rem; border-bottom:1px solid #ddd;">{{ kriterium.text }}</td>
+                                    <td colspan="2" style="padding:0.75rem; border-bottom:1px solid #ddd; color:gray;">
+                                        Keine Bewertung abgegeben
+                                    </td>
+                                </tr>
+                                {% endif %}
+                            {% endwith %}
+                        {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p>Für dieses Projekt sind keine Kriterien definiert.</p>
+            {% endif %}
+        {% else %}
+            <p>Für diesen Antrag liegt noch keine Bewertung vor.</p>
+            {% if user.role == "Vergabestelle" %}
+            <a href="{% url 'antrag_bewerten' antrag.pk %}">
+                <button>Bewertung hinzufügen</button>
+            </a>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    {# Bewertung-Link, nur für Vergabestelle #}
+    {% if request.user.is_authenticated and request.user.role == "Vergabestelle" %}
+    <div style="margin-top: 1.5rem;">
+        <a href="{% url 'antrag_bewerten' antrag.pk %}">
+            <button style="padding:0.6rem 1.2rem; background:var(--primary); color:white; border:none; border-radius:4px;">
+                Bewertung hinzufügen/bearbeiten
+            </button>
+        </a>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 2rem;">
+        <a href="{% if request.user.role == 'Vergabestelle' %}{% url 'antrag_liste' %}{% else %}{% url 'dashboard' %}{% endif %}">
+            <button style="width:auto; padding:0.6rem 1.2rem;">Zurück zur Übersicht</button>
+        </a>
+    </div>
+</div>
+{% endblock %}

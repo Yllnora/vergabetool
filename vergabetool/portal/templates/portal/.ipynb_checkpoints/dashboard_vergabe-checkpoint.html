@@ -1,0 +1,16 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Vergabestelle Dashboard{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Vergabestelle Dashboard</h2>
+    <p>Willkommen, {{ request.user.username }}</p>
+
+    <p>Hier können Sie Bewerbungen prüfen, Kriterien verwalten und Auswertungen starten.</p>
+    <p>(Weitere Funktionen folgen.)</p>
+</div>
+{% endblock %}

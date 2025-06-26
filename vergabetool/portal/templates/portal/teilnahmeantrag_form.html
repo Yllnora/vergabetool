@@ -1,0 +1,119 @@
+{% extends 'portal/base.html' %}
+{% block title %}Teilnahmeantrag – Formular{% endblock %}
+{% block content %}
+<div class="form-container">
+  <h2>Teilnahmeantrag – Teil 1 bis 4</h2>
+  <form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {# Projekt dropdown #}
+    <div class="form-group">
+      {{ form.projekt.label_tag }}{% if form.projekt.field.required %}<span style="color:red;">*</span>{% endif %}
+      {{ form.projekt }}
+      {{ form.projekt.errors }}
+    </div>
+    {# Firmenname & Adresse #}
+    <div class="form-group">
+      {{ form.firmenname.label_tag }}{% if form.firmenname.field.required %}<span style="color:red;">*</span>{% endif %}
+      {{ form.firmenname }}
+      {{ form.firmenname.errors }}
+    </div>
+    <div class="form-group">
+      {{ form.adresse.label_tag }}{% if form.adresse.field.required %}<span style="color:red;">*</span>{% endif %}
+      {{ form.adresse }}
+      {{ form.adresse.errors }}
+    </div>
+    {# Placeholder for dynamic Fragen: #}
+    <div id="dynamic-questions"></div>
+
+    {# The rest of fields #}
+    {% for field in form %}
+      {% if field.name != 'projekt' and field.name != 'firmenname' and field.name != 'adresse' %}
+        <div class="form-group">
+          {{ field.label_tag }}{% if field.field.required %}<span style="color:red;">*</span>{% endif %}
+          {{ field }}
+          {% if field.help_text %}
+            <small style="color:#555;">{{ field.help_text }}</small>
+          {% endif %}
+          {{ field.errors }}
+        </div>
+      {% endif %}
+    {% endfor %}
+
+    <button type="submit">Antrag absenden</button>
+  </form>
+  <a href="{% url 'dashboard' %}">Zurück zum Dashboard</a>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const projektSelect = document.getElementById("id_projekt");
+    const dynamicDiv = document.getElementById("dynamic-questions");
+    function clearDynamicQuestions() {
+        dynamicDiv.innerHTML = "";
+    }
+    function renderQuestionField(q) {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('form-group');
+        wrapper.style.marginBottom = '1.5rem';
+        const label = document.createElement('label');
+        label.setAttribute('for', `id_frage_${q.id}`);
+        label.innerText = q.text;
+        wrapper.appendChild(label);
+        wrapper.appendChild(document.createElement('br'));
+        let input;
+        if (q.field_type === 'boolean') {
+            input = document.createElement('input');
+            input.type = 'checkbox';
+            input.name = `frage_${q.id}`;
+            input.id = `id_frage_${q.id}`;
+            wrapper.appendChild(input);
+        } else if (q.field_type === 'text') {
+            input = document.createElement('textarea');
+            input.name = `frage_${q.id}`;
+            input.id = `id_frage_${q.id}`;
+            input.rows = 2;
+            input.style.width = '100%';
+            wrapper.appendChild(input);
+        }
+        return wrapper;
+    }
+    async function loadFragen(projektId) {
+        if (!projektId) {
+            clearDynamicQuestions();
+            return;
+        }
+        try {
+            const urlTemplate = "{% url 'projekt_fragen_api' 0 %}";
+            const url = urlTemplate.replace('/0/', '/' + projektId + '/');
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.error("Fehler beim Laden der Fragen:", response.status);
+                clearDynamicQuestions();
+                return;
+            }
+            const data = await response.json();
+            const fragen = data.fragen || [];
+            clearDynamicQuestions();
+            fragen.forEach(q => {
+                const fieldElem = renderQuestionField(q);
+                dynamicDiv.appendChild(fieldElem);
+            });
+        } catch (err) {
+            console.error("Fehler beim Laden der Fragen:", err);
+            clearDynamicQuestions();
+        }
+    }
+    if (projektSelect) {
+      projektSelect.addEventListener('change', function(){
+          const projektId = this.value;
+          loadFragen(projektId);
+      });
+      // Optionally load on page load if editing or bound with initial:
+      if (projektSelect.value) {
+          loadFragen(projektSelect.value);
+      }
+    }
+});
+</script>
+{% endblock %}

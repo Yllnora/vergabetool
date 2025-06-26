@@ -1,0 +1,7 @@
+{% extends 'portal/base.html' %}
+{% block content %}
+  <div style="text-align:center; margin-top:2rem;">
+    <h2>{{ message }}</h2>
+    <a href="{% url 'dashboard' %}"><button>Zurück zum Dashboard</button></a>
+  </div>
+{% endblock %}

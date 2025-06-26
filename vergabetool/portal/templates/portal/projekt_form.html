@@ -1,0 +1,37 @@
+{% extends 'portal/base.html' %}
+{% block title %}
+    {% if projekt %}Projekt bearbeiten{% else %}Neues Projekt{% endif %}
+{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom:1rem;">
+    {% if projekt %}Projekt bearbeiten{% else %}Neues Projekt anlegen{% endif %}
+</h2>
+
+<form method="POST">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div style="max-width:400px;">
+        <div style="margin-bottom:1rem;">
+            <label for="{{ form.name.id_for_label }}">Projekt‐Name:</label><br>
+            {{ form.name }}
+            {% for err in form.name.errors %}
+            <div style="color:red;">{{ err }}</div>
+            {% endfor %}
+        </div>
+        <div style="margin-bottom:1rem;">
+            <label for="{{ form.deadline.id_for_label }}">Deadline:</label><br>
+            {{ form.deadline }}
+            {% for err in form.deadline.errors %}
+            <div style="color:red;">{{ err }}</div>
+            {% endfor %}
+        </div>
+        <button type="submit" style="padding:0.5rem 1rem;">
+            {% if projekt %}Speichern{% else %}Anlegen{% endif %}
+        </button>
+        <a href="{% url 'projekt_liste' %}" style="margin-left:1rem;">
+            <button type="button" style="background:#777;color:white;padding:0.5rem 1rem;">Abbrechen</button>
+        </a>
+    </div>
+</form>
+{% endblock %}

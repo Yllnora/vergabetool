@@ -1,0 +1,61 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Projekte & Anträge{% endblock %}
+
+{% block content %}
+  <h2>Projekte & Eingereichte Anträge</h2>
+
+  {% for projekt in projekte %}
+    <div style="margin-bottom: 2rem; border: 1px solid #ddd; padding: 1rem; border-radius: 8px;">
+      <h3>
+        {{ projekt.name }}
+        <small style="font-style: italic; color: gray;">
+          (Deadline: {{ projekt.deadline|date:"d.m.Y" }})
+        </small>
+      </h3>
+
+      {% if projekt.antraege.all %}
+        <table style="width:100%; border-collapse: collapse; margin-top: .5rem;">
+          <thead style="background-color: #f4f4f4;">
+            <tr>
+              <th style="padding: 6px; text-align: left;">Firma</th>
+              <th style="padding: 6px; text-align: left;">Ansprechpartner</th>
+              <th style="padding: 6px; text-align: left;">E-Mail</th>
+              <th style="padding: 6px; text-align: left;">Umsatz 2023</th>
+              <th style="padding: 6px; text-align: left;">Erstellt am</th>
+              <th style="padding: 6px; text-align: left;">Status</th>
+              <th style="padding: 6px; text-align: left;">Aktion</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for antrag in projekt.antraege.all|dictsortreversed:"erstellt_am" %}
+              <tr>
+                <td style="padding: 6px;">{{ antrag.firmenname }}</td>
+                <td style="padding: 6px;">{{ antrag.ansprechpartner }}</td>
+                <td style="padding: 6px;">{{ antrag.email }}</td>
+                <td style="padding: 6px;">{{ antrag.umsatz_2023 }}</td>
+                <td style="padding: 6px;">{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
+                <td style="padding: 6px;">
+                  {% if antrag.is_late %}
+                    <span style="background: red; color: white; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                      Verspätet
+                    </span>
+                  {% else %}
+                    <span style="background: green; color: white; padding: 0.2rem 0.5rem; border-radius: 4px;">
+                      Rechtzeitig
+                    </span>
+                  {% endif %}
+                </td>
+                <td style="padding: 6px;">
+                  <a href="{% url 'antrag_detail' antrag.pk %}">Details</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p><em>Keine Anträge für dieses Projekt.</em></p>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% endblock %}

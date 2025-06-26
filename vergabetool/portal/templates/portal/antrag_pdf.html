@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        h1 { color: #1c3c57; }
+        li { margin-bottom: 0.5rem; }
+    </style>
+</head>
+<body>
+    <h1>Teilnahmeantrag – {{ antrag.firmenname }}</h1>
+    <ul>
+        <li><strong>Ansprechpartner:</strong> {{ antrag.ansprechpartner }}</li>
+        <li><strong>E-Mail:</strong> {{ antrag.email }}</li>
+        <li><strong>Adresse:</strong> {{ antrag.adresse }}</li>
+        <li><strong>Berufshaftpflicht vorhanden:</strong> {{ antrag.berufshaftpflicht_vorhanden|yesno:"Ja,Nein" }}</li>
+        <li><strong>Eingereicht am:</strong> {{ antrag.erstellt_am|date:"d.m.Y H:i" }}</li>
+    </ul>
+</body>
+</html>

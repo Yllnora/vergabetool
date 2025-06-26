@@ -1,0 +1,37 @@
+{% extends 'portal/base.html' %}
+{% block title %}Bewertungen – Übersicht{% endblock %}
+{% block content %}
+  <h2>Übersicht aller Bewertungen</h2>
+  {% if antraege %}
+    <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+      <thead>
+        <tr style="background:#f4f4f4;">
+          <th style="padding:0.75rem; text-align:left;">Firma</th>
+          <th style="padding:0.75rem; text-align:left;">Projekt</th>
+          <th style="padding:0.75rem; text-align:left;">Letzte Bewertung</th>
+          <th style="padding:0.75rem; text-align:left;">Aktion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for antrag in antraege %}
+          <tr>
+            <td style="padding:0.75rem;">{{ antrag.firmenname }}</td>
+            <td style="padding:0.75rem;">{{ antrag.projekt.name }}</td>
+            <td style="padding:0.75rem;">
+              {% if antrag.letzte %}
+                {{ antrag.letzte|date:"d.m.Y H:i" }}
+              {% else %}
+                –
+              {% endif %}
+            </td>
+            <td style="padding:0.75rem;">
+              <a href="{% url 'bewertung_detail' antrag.pk %}">Details</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>Es liegen noch keine Bewertungen vor.</p>
+  {% endif %}
+{% endblock %}

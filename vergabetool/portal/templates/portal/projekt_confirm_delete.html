@@ -1,0 +1,17 @@
+{% extends 'portal/base.html' %}
+{% block title %}Projekt löschen{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom:1rem;">Projekt löschen</h2>
+
+<p>Möchten Sie das Projekt "<strong>{{ projekt.name }}</strong>" wirklich löschen?</p>
+<p>Dieser Vorgang kann nicht rückgängig gemacht werden und alle zugehörigen Anträge bleiben im System, erhalten aber keine gültige Projekt-Verknüpfung.</p>
+
+<form method="POST" style="margin-top:1rem;">
+    {% csrf_token %}
+    <button type="submit" style="background:#c0392b; color:white; padding:0.5rem 1rem;">Ja, löschen</button>
+    <a href="{% url 'projekt_liste' %}" style="margin-left:1rem;">
+        <button type="button" style="background:#777; color:white; padding:0.5rem 1rem;">Abbrechen</button>
+    </a>
+</form>
+{% endblock %}

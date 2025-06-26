@@ -1,0 +1,27 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Registrierung – Vergabetool{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Registrierung</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <input type="text" name="username" placeholder="Benutzername" required>
+        <input type="email" name="email" placeholder="E-Mail" required>
+        <input type="password" name="password" placeholder="Passwort" required>
+        <select name="role" required>
+            <option value="">-- Rolle wählen --</option>
+            <option value="Bieter">Bieter</option>
+            <option value="Vergabestelle">Vergabestelle</option>
+        </select>
+        <button type="submit">Registrieren</button>
+    </form>
+
+    <a href="{% url 'login' %}">Bereits registriert? Jetzt einloggen</a>
+</div>
+{% endblock %}

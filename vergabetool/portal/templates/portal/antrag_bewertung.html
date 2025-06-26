@@ -1,0 +1,71 @@
+{% extends 'portal/base.html' %}
+{% block title %}Antrag bewerten: {{ antrag.firmenname }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 2rem auto;">
+  <h2>Bewertung: {{ antrag.firmenname }}</h2>
+  <h3>Projekt: {{ antrag.projekt.name }}</h3>
+
+  <form method="post">
+    {% csrf_token %}
+    {# Show non-field errors if present #}
+    {% if form.non_field_errors %}
+      <div style="color: red; margin-bottom: 1rem;">
+        {{ form.non_field_errors }}
+      </div>
+    {% endif %}
+
+    <table style="width:100%; border-collapse: collapse; margin-top:1rem;">
+      <thead>
+        <tr style="background:#f4f4f4;">
+          <th style="padding:0.75rem; text-align:left;">Kriterium</th>
+          <th style="padding:0.75rem; text-align:left; width:100px;">Punkte</th>
+          <th style="padding:0.75rem; text-align:left;">Kommentar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pair in kriterium_pairs %}
+          <tr>
+            <td style="padding:0.5rem; border-bottom:1px solid #ddd; vertical-align: top;">
+              {{ pair.label }}
+            </td>
+            <td style="padding:0.5rem; border-bottom:1px solid #ddd; vertical-align: top;">
+              {{ pair.punkte_field }}
+              {% if pair.punkte_field.errors %}
+                <div style="color:red; font-size:0.9em;">
+                  {{ pair.punkte_field.errors.as_text }}
+                </div>
+              {% endif %}
+            </td>
+            <td style="padding:0.5rem; border-bottom:1px solid #ddd; vertical-align: top;">
+              {% if pair.comment_field %}
+                {{ pair.comment_field }}
+                {% if pair.comment_field.errors %}
+                  <div style="color:red; font-size:0.9em;">
+                    {{ pair.comment_field.errors.as_text }}
+                  </div>
+                {% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3" style="padding:0.75rem; text-align:center; color:gray;">
+              Keine Kriterien definiert.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="margin-top: 1.5rem;">
+      <button type="submit" style="padding:0.6rem 1.2rem;">Speichern</button>
+      <a href="{% url 'antrag_detail' antrag.pk %}" style="margin-left:1rem;">
+        <button type="button" style="padding:0.6rem 1.2rem; background:#ccc; color:#000;">Abbrechen</button>
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}

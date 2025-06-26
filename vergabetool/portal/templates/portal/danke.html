@@ -1,0 +1,21 @@
+{% extends 'portal/base.html' %}
+{% load static %}
+{% block title %}Vielen Dank – Vergabetool{% endblock %}
+{% block content %}
+<div class="form-container">
+    <div class="logo">
+        <img src="{% static 'portal/images/meixner-logo.png' %}" alt="Meixner + Partner Logo">
+    </div>
+
+    <h2>Vielen Dank!</h2>
+    <p style="text-align: center;">
+        Ihr Teilnahmeantrag wurde erfolgreich übermittelt.
+    </p>
+
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{% url 'dashboard' %}">
+            <button>Zurück zum Dashboard</button>
+        </a>
+    </div>
+</div>
+{% endblock %}
