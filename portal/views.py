@@ -50,7 +50,6 @@ def user_login(request):
             messages.error(request, 'Login fehlgeschlagen. Bitte überprüfe deine Daten.')
     return render(request, 'portal/login.html')
 
-
 @login_required
 def dashboard_vergabestelle(request):
     """

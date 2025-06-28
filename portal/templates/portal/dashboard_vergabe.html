@@ -31,6 +31,7 @@
                     <th style="padding:8px; text-align:left;">Firma</th>
                     <th style="padding:8px; text-align:left;">Ansprechpartner</th>
                     <th style="padding:8px; text-align:left;">Umsatz 2023</th>
+                    <th style="padding:8px; text-align:left;">Ø Umsatz (3 Jahre)</th>
                     <th style="padding:8px; text-align:left;">Eingereicht am</th>
                     <th style="padding:8px; text-align:left;">Status</th>
                     <th style="padding:8px; text-align:left;">Details</th>
@@ -42,6 +43,7 @@
                       <td style="padding:8px;">{{ antrag.firmenname }}</td>
                       <td style="padding:8px;">{{ antrag.ansprechpartner }}</td>
                       <td style="padding:8px;">{{ antrag.umsatz_2023 }}</td>
+                      <td style="padding:8px;">{{ antrag.avg_umsatz|floatformat:2 }} €</td>
                       <td style="padding:8px;">{{ antrag.erstellt_am|date:"d.m.Y H:i" }}</td>
                       <td style="padding:8px;">
                         {% if antrag.is_late %}

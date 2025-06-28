@@ -20,9 +20,9 @@ class AntragE2ETest(LiveServerTestCase):
     def setUpClass(cls):
         super().setUpClass()
         options = webdriver.ChromeOptions()
-        options.add_argument('--headless')            # run in headless mode
-        options.add_argument('--disable-gpu')         # disable GPU (often needed)
-        options.add_argument('--no-sandbox')          # disable sandbox (in some CI)
+        # options.add_argument('--headless')            # run in headless mode
+        # options.add_argument('--disable-gpu')         # disable GPU (often needed)
+        # options.add_argument('--no-sandbox')          # disable sandbox (in some CI)
         options.add_argument('--window-size=1920,1080')
         # you may need other flags depending on environment
         cls.browser = webdriver.Chrome(options=options)
@@ -45,7 +45,6 @@ class AntragE2ETest(LiveServerTestCase):
         self.browser.get(self.live_server_url + reverse('teilnahmeantrag_erstellen'))
         # Fill fields
         Projekt.objects.create(name="E2E Project", deadline=date(2100,1,1))
-        # later they create again with deadline date.today()+7
         select = Select(self.browser.find_element(By.NAME, "projekt"))
         select.select_by_visible_text("E2E Project") 
         self.browser.find_element(By.NAME, "firmenname").send_keys("TestFirma")

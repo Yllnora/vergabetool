@@ -227,6 +227,15 @@ class Teilnahmeantrag(models.Model):
         help_text="Nur PDF zulässig"
     )
 
+    @property
+    def avg_umsatz(self) -> Decimal:
+        """Durchschnitts-Umsatz der letzten 3 Jahre."""
+        werte = [self.umsatz_2023, self.umsatz_2022, self.umsatz_2021]
+        # None-Werte ausschließen, falls nötig:
+        werte = [w for w in werte if w is not None]
+        if not werte:
+            return Decimal('0.00')
+        return sum(werte) / Decimal(len(werte))
 
     # NEW: dynamic answers to Fragen
     from django.db.models import JSONField
